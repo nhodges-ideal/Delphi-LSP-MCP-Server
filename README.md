@@ -1,91 +1,151 @@
 # Delphi LSP MCP Server
 
-A Model Context Protocol (MCP) server that exposes Language Server Protocol (LSP) capabilities to AI assistants and other MCP clients. Supports both Delphi's DelphiLSP and Free Pascal's pasls.
+A Model Context Protocol (MCP) server that exposes Language Server Protocol (LSP) capabilities to AI assistants and other MCP clients.
 
-## Project Information
+Supports both:
 
-**Author:** Skybuck Flying  
-**Contact:** skybuck2000@hotmail.com  
-**Version:** 0.05  
+- Embarcadero Delphi (`DelphiLSP.exe`)
+- Free Pascal (`pasls.exe`)
 
-**Repository:** https://github.com/SkybuckFlying/Delphi-LSP-MCP-Server  
+---
 
-**Specifications:**  
-- MCP Specification (2025-11-25): https://modelcontextprotocol.io/specification/2025-11-25  
-- LSP Specification 3.17: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
+## Target Specifications
 
-## Overview
+- MCP Specification: **2025-11-25**
+- LSP Specification: **3.17**
 
-This server acts as a bridge between:
-- **MCP Clients** (like Claude Desktop, Antigravity, Gemini-CLI) - communicate via JSON-RPC 2.0 over stdio
-- **LSP Servers** (DelphiLSP.exe or pasls.exe) - Embarcadero's or Free Pascal's Language Server
+---
 
-It allows AI assistants to perform code intelligence operations on Delphi/Pascal source code, including:
+## Features
+
+- MCP ↔ LSP bridge using JSON-RPC 2.0
+- stdio-based transport
+- Dynamic workspace discovery
+- Semantic code intelligence for AI agents
+- Delphi and Free Pascal support
+- Debugger synchronization support (`--wait`)
+- Automatic project discovery (`.dpr` / `.lpr`)
+- LSP retry logic and auto-document-open
+- Compatible with:
+  - Claude Desktop
+  - Gemini-CLI
+  - Antigravity
+  - Other MCP-compatible clients
+
+### Supported Operations
+
 - Go to Definition
 - Find References
 - Hover Information
 - Code Completion
 - Workspace Symbol Search
 
-## AI Optimization (NEW)
+---
 
-To maximize the effectiveness of this server with AI agents (such as Gemini-CLI or Claude Engineer), a standardized guidance file is available:
+## Project Information
 
-### [DelphiLSP.md](./DelphiLSP.md)
-This document provides specific instructions for AI agents to prioritize semantic tools (e.g., `hover` and `goto_definition`) over standard text-based searches.
+| Item | Details |
+|------|---------|
+| Author | Skybuck Flying |
+| Contact | skybuck2000@hotmail.com |
+| Version | 0.08 |
+| Repository | https://github.com/SkybuckFlying/Delphi-LSP-MCP-Server |
 
-**Recommended Setup:**
-Add the following snippet to a `GEMINI.md` file in the Delphi project root to ensure optimal use of the LSP:
+### Specifications
 
-```markdown
-# Project Context
-Refer to [DelphiLSP.md](./DelphiLSP.md) for instructions on using semantic tools for code analysis. This is essential for accurate type checking and navigation.
-```
+- MCP Specification (2025-11-25)  
+  https://modelcontextprotocol.io/specification/2025-11-25
+
+- Language Server Protocol Specification 3.17  
+  https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
+
+---
 
 ## Requirements
 
-- Delphi 13 (RAD Studio 13.0 or later)
-- DelphiLSP.exe (included with RAD Studio) or pasls.exe (Free Pascal Language Server)
 - Windows OS
+- Delphi 13 (RAD Studio 13.0+) or Free Pascal
+- `DelphiLSP.exe` or `pasls.exe`
+
+---
 
 ## Building
 
-1. Open `DelphiLSPMCPServer.dpr` in Delphi IDE
-2. Build the project (Project → Build)
-3. The executable will be created in the project directory
+### Delphi IDE
 
-Or use the command line:
+1. Open `DelphiLSPMCPServer.dpr`
+2. Select **Project → Build**
+
+### Command Line
+
 ```bash
 dcc64 DelphiLSPMCPServer.dpr
 ```
+
+---
 
 ## Usage
 
 ### Command Line Options
 
-```bash
+```text
 DelphiLSPMCPServer [options]
 
 Options:
-  --lsp-path <path>      Path to LSP server executable
-                         (default: G:\Tools\PascalLanguageServer\git version 26 january 2026\pasls.exe)
-  --workspace <path>     Static workspace root directory or file:// URI (Optional)
-  --log-level <level>    Log level: debug, info, warning, error (default: info)
-  --help                 Show help message
+  --lsp-path <path>      Path to LSP executable
+  --workspace <path>     Workspace root or file:// URI
+  --log-level <level>    debug, info, warning, error
+  --debug                Enable verbose diagnostics
+  --wait                 Wait for debugger before startup
+  --help                 Show help
 ```
 
-### Dynamic Workspace Configuration (v0.05+)
+---
 
-Starting with version 0.05, the server is **environment-aware**. It can dynamically determine the workspace in two ways:
-1. **Initialize Sniffing**: The server intercepts the MCP `initialize` request and looks for `rootUri` or `rootPath`. It will automatically target the folder provided by the AI client.
-2. **CWD Defaulting**: If no workspace is provided via command line or protocol, it defaults to its own Current Working Directory.
+## Dynamic Workspace Discovery
 
-This makes it ideal for use with AI agents that switch between different projects.
+Starting with v0.05, the server can automatically determine the active workspace.
 
-### Configuration Examples
+### Detection Strategy
 
-#### Antigravity / Gemini-CLI / Agent Settings
-To use the server with a dynamic agent, you can leave out the `--workspace` argument so the agent can provide it:
+1. MCP `initialize` request
+   - Reads `rootUri` or `rootPath`
+
+2. Current Working Directory fallback
+
+3. Automatic `.dpr` / `.lpr` project detection
+
+This allows AI agents to switch projects dynamically without restarting the server configuration.
+
+---
+
+## AI Optimization
+
+The repository includes:
+
+- `DelphiLSP.md`
+
+This file instructs AI agents to prioritize semantic tools such as:
+
+- `hover`
+- `goto_definition`
+
+instead of relying on text-based searches.
+
+### Recommended GEMINI.md Setup
+
+```text
+# Project Context
+
+Refer to DelphiLSP.md for semantic code analysis instructions.
+Use LSP semantic tools instead of grep/text searching whenever possible.
+```
+
+---
+
+## Configuration Examples
+
+### Gemini-CLI / Antigravity
 
 ```json
 {
@@ -93,16 +153,17 @@ To use the server with a dynamic agent, you can leave out the `--workspace` argu
     "delphi-lsp": {
       "command": "C:\\Tools\\DelphiLSPMCPServer.exe",
       "args": [
-        "--log-level", "info",
-        "--lsp-path", "G:\\Tools\\PascalLanguageServer\\git version 26 january 2026\\pasls.exe"
+        "--log-level",
+        "info",
+        "--lsp-path",
+        "G:\\Tools\\PascalLanguageServer\\pasls.exe"
       ]
     }
   }
 }
 ```
 
-#### Claude Desktop
-Add to your Claude Desktop MCP configuration (`claude_desktop_config.json`):
+### Claude Desktop
 
 ```json
 {
@@ -110,54 +171,125 @@ Add to your Claude Desktop MCP configuration (`claude_desktop_config.json`):
     "delphi-lsp": {
       "command": "C:\\Tools\\DelphiLSPMCPServer.exe",
       "args": [
-        "--workspace", "C:\\MyDelphiProject",
-        "--log-level", "info"
+        "--workspace",
+        "C:\\MyProject",
+        "--log-level",
+        "info"
       ]
     }
   }
 }
 ```
+
+---
 
 ## Available Tools
 
-### delphi_goto_definition
+### `delphi_goto_definition`
 
 Find the definition of a symbol at a specific position.
 
-**Parameters:**
-- `uri` (string): File URI (e.g., `file:///C:/path/to/file.pas`)
-- `line` (integer): Zero-based line number
-- `character` (integer): Zero-based character offset
+#### Parameters
 
-### delphi_find_references
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `uri` | string | File URI |
+| `line` | integer | Zero-based line number |
+| `character` | integer | Zero-based character offset |
+
+Example URI:
+
+```text
+file:///C:/Projects/MyProject/MainUnit.pas
+```
+
+---
+
+### `delphi_find_references`
 
 Find all references to a symbol.
 
-**Parameters:**
-- `uri` (string): File URI
-- `line` (integer): Zero-based line number
-- `character` (integer): Zero-based character offset
-- `includeDeclaration` (boolean, optional): Include declaration in results (default: true)
+#### Parameters
 
-### delphi_hover
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `uri` | string | File URI |
+| `line` | integer | Zero-based line number |
+| `character` | integer | Zero-based character offset |
+| `includeDeclaration` | boolean | Include declaration in results |
 
-Get hover information (documentation, type info) for a symbol.
+---
 
-### delphi_completion
+### `delphi_hover`
 
-Get code completion suggestions at a specific position.
+Retrieve hover information such as:
 
-### delphi_workspace_symbols
+- Type information
+- Symbol documentation
+- Declaration details
+
+#### Parameters
+
+| Parameter | Type |
+|-----------|------|
+| `uri` | string |
+| `line` | integer |
+| `character` | integer |
+
+---
+
+### `delphi_completion`
+
+Retrieve code completion suggestions.
+
+#### Parameters
+
+| Parameter | Type |
+|-----------|------|
+| `uri` | string |
+| `line` | integer |
+| `character` | integer |
+
+---
+
+### `delphi_workspace_symbols`
 
 Search for symbols across the entire workspace.
 
-**Parameters:**
-- `query` (string): Search query string
+#### Parameters
 
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `query` | string | Symbol search query |
+
+---
+
+## Debugging Support
+
+Version 0.08 introduced debugger synchronization support.
+
+### Features
+
+- `--wait` startup mode
+- Cross-process synchronization using Windows Events
+- Automatic debugger attach workflow
+- No blocking `ReadLn`
+- Heartbeat logging during wait state
+- First-line debugging support
+
+### Typical Workflow
+
+1. Start test runner with `--wait`
+2. Attach debugger to server process
+3. Set breakpoints
+4. Continue execution
+5. Tests begin automatically
+
+---
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────┐
 │  MCP Client         │
 │  (AI Assistant)     │
@@ -166,84 +298,223 @@ Search for symbols across the entire workspace.
            ▼
 ┌─────────────────────┐
 │  Delphi LSP MCP     │
-│  Server (v0.05)     │
+│  Server             │
+│                     │
 │  ┌───────────────┐  │
 │  │ MCP Server    │  │
-│  │ Component     │  │
 │  └───────┬───────┘  │
 │          │          │
 │  ┌───────▼───────┐  │
 │  │ LSP Client    │  │
-│  │ Component     │  │
 │  └───────┬───────┘  │
 └──────────┼──────────┘
-           │ LSP JSON-RPC over stdio
+           │ LSP JSON-RPC
            ▼
 ┌─────────────────────┐
-│  DelphiLSP.exe /    │
-│  pasls.exe          │
-│  (Language Server)  │
+│ DelphiLSP / pasls   │
 └─────────────────────┘
 ```
 
-## Unit Structure
+---
+
+## Core Units
 
 | Unit | Responsibility |
-|------|---------------|
-| `Common.JsonRpc` | JSON-RPC 2.0 message types and parsing |
+|------|----------------|
+| `Common.JsonRpc` | JSON-RPC parsing and message types |
 | `Common.Logging` | Thread-safe singleton logger |
-| `Common.Utils` | **(NEW in 0.05)** Centralized Path/URI conversion utilities |
+| `Common.Utils` | URI/path conversion utilities |
 | `MCP.Protocol.Types` | MCP protocol type definitions |
-| `MCP.Server` | MCP server core: dynamic workspace discovery, tool routing |
-| `MCP.Tools.LSP` | Tool implementations bridging MCP to LSP |
-| `MCP.Transport.Stdio` | MCP stdio transport with Content-Length headers |
-| `LSP.Client` | LSP client: synchronous requests, document sync |
-| `LSP.Protocol.Types` | LSP protocol type definitions |
-| `LSP.Transport.Process` | LSP process transport: child process management |
+| `MCP.Server` | MCP routing and workspace discovery |
+| `MCP.Tools.LSP` | MCP → LSP bridge implementations |
+| `MCP.Transport.Stdio` | MCP stdio transport |
+| `LSP.Client` | LSP request handling and document sync |
+| `LSP.Protocol.Types` | LSP protocol definitions |
+| `LSP.Transport.Process` | LSP child process management |
+
+---
+
+## Testing
+
+The repository includes:
+
+- `TestAllTools.dpr`
+
+Coverage includes:
+
+- MCP initialization
+- Tool discovery
+- Hover requests
+- Definition lookup
+- Reference lookup
+- Completion
+- Workspace symbol search
+- Error handling
+- Shutdown handling
+
+### Running Tests
+
+```bash
+TestAllTools.exe
+TestAllTools.exe --wait
+TestAllTools.exe --help
+```
+
+---
+
+## Known Issues
+
+### pasls Limitations
+
+- Initial indexing may require delays after `didOpen`
+- Hover requests can timeout on very large projects
+- FPC installation paths must be configured correctly
+- Server/LSP bitness should match (recommendation, not a requirement)
+
+### Recommendations
+
+- Match server and LSP bitness
+- Add delay after `didOpen`
+- Verify RTL/FPC configuration
+- Use retry logic for transient failures
+
+---
 
 ## Version History
 
-- **0.01** (26 January 2026) — Initial release
-- **0.02** (2 February 2026) — Protocol compliance improvements
-- **0.04** (27 April 2026) — Improved unit separation and architecture
-  - Added LSP retry logic and auto-document-open
-  - Support for both DelphiLSP and pasls
-- **0.05** (27 April 2026) — Dynamic Workspace & Stability
-  - **Dynamic Workspace Discovery**: Automatically sniffs `rootUri` from initialize request
-  - **Environment Stabilization**: Fixed FPC environment variable inheritance
-  - **Refactored Utilities**: Centralized URI/Path handling in `Common.Utils`
-  - **Auto-Project Search**: Automatically finds `.dpr` or `.lpr` in workspace root
-  - **Delphi Mode**: Forces `-Mdelphi` for better syntax parsing in Free Pascal
-  - **AI Guidance**: Added `DelphiLSP.md` for standardized AI agent instructions
-  - **Expanded Test Suite**: Updated `SourceForAnalysis.dpr` with interfaces, generics, and inheritance tests
+## Version History
+
+### v0.08 — Debugging Synchronization  
+**Date: 27 May 2026 (Git commits match this work)**
+
+- Added named Windows Event synchronization  
+- Added debugger wait support (`--wait`)  
+- Added first-line debugging workflow  
+- Added heartbeat status logging during wait  
+- Removed blocking `ReadLn`  
+- Fixed double-free crash in `HandleToolsList`  
+- All 20 automated tests passing  
+
+---
+
+### v0.07 — Debugging Infrastructure Preparation  
+**Date: 27 May 2026 (filesystem)**
+
+- Added preliminary debugger-wait scaffolding  
+- Added early heartbeat logging  
+- Added initial named event constants  
+- Improved LSP startup race-condition handling  
+- Improved error messages for missing LSP executable  
+- Added retry logic for pasls hover/definition failures  
+
+---
+
+### v0.06 — LSP Stability & pasls Compatibility  
+**Date: 27 May 2026 (filesystem)**
+
+- Improved synchronous and queued LSP request handling  
+- Added pasls-specific indexing delay handling  
+- Improved workspace sniffing reliability  
+- Added fallback for missing or malformed `rootUri`  
+- Improved `.dpr` / `.lpr` detection heuristics  
+- Fixed environment variable inheritance for DelphiLSP  
+- Added internal LSP health-check pings  
+- Expanded semantic test suite (generics, interfaces, inheritance)  
+
+---
+
+### v0.05 — Dynamic Workspace & Stability  
+**Date: 27 April 2026 (Git)**
+
+- Dynamic workspace discovery from MCP initialize request  
+- Centralized URI/path handling in `Common.Utils`  
+- Automatic `.dpr` / `.lpr` project discovery  
+- Forced `-Mdelphi` parsing mode for Free Pascal  
+- Added `DelphiLSP.md` AI guidance  
+- Expanded semantic analysis test coverage  
+
+---
+
+### v0.04 — Architecture Improvements  
+**Date: 27 April 2026 (Git)**
+
+- Major architecture refactor  
+- Added LSP retry logic  
+- Added automatic document opening  
+- Improved unit separation  
+- Added support for both DelphiLSP and pasls  
+
+---
+
+### v0.03 — Test More Functionality  
+**Date: 27 April 2026 (filesystem)**  
+*(No Git commit exists for this version)*
+
+- Experimental version  
+- Used for testing additional functionality  
+- this version was bad and was skipped.
+
+---
+
+### v0.02 — Protocol Compliance  
+**Date: 02 February 2026 (Git)**
+
+- Improved PasLS integration  
+- Fixed encoding issues  
+- Improved JSON‑RPC compliance  
+- Stabilized LSP features (definition, hover)  
+
+---
+
+### v0.01 — Initial Release  
+**Date: 26 January 2026 (Git)**
+
+- Initial MCP ↔ LSP bridge implementation  
+- Initial Delphi semantic tooling support  
+
+
+
+## Roadmap
+
+### Short Term
+
+- LSP health checks
+- Better timeout recovery
+- Enhanced diagnostics
+- Automatic LSP restart support
+
+### Medium Term
+
+- Incremental document synchronization
+- Project configuration support
+- Compiler/search path configuration
+
+### Long Term
+
+- Async operations
+- Response caching
+- Connection pooling
+- Additional LSP features:
+  - Rename
+  - Code Actions
+  - Formatting
+
+---
+
+## Documentation
+
+Additional documentation:
+
+- `DelphiLSP.md`
+- `/docs/architecture.md`
+- `/docs/testing.md`
+- `/docs/debugging.md`
+- `/docs/version-history.md`
+
+---
 
 ## License
 
-This is a demonstration project. Use at your own risk.
+This is a demonstration project.
 
-- Automatic LSP server restart on crash  
-- Improved timeout handling  
-- Retry logic for transient failures  
-
-#### Add Configuration Options
-- Project file support  
-- Search path configuration  
-- Compiler settings  
-
-#### Performance Optimization
-- Connection pooling  
-- Response caching  
-- Async operations  
-
-
-### For Testing
-
-#### Unit Tests
-- JSON‑RPC parsing  
-- Protocol type serialization  
-- Message transport  
-
-#### Integration Tests
-- Real Delphi projects  
-- Various file types  
-- Edge cases
+Use at your own risk.
