@@ -7,7 +7,8 @@ unit LSP.Protocol.Types;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.JSON, System.Generics.Collections;
+  System.SysUtils, System.Classes, System.JSON, System.Generics.Collections,
+  System.StrUtils;
 
 type
   // LSP Position
@@ -19,6 +20,7 @@ type
     class function Default: TLSPPosition; static;
     class operator Equal(const A, B: TLSPPosition): Boolean;
     class operator NotEqual(const A, B: TLSPPosition): Boolean;
+    function ToString: string;
   end;
 
   // LSP Range
@@ -28,6 +30,7 @@ type
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPRange; static;
     class function Default: TLSPRange; static;
+    function ToString: string;
   end;
 
   // LSP Location
@@ -36,6 +39,7 @@ type
     Range: TLSPRange;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPLocation; static;
+    function ToString: string;
   end;
 
   // LSP Text Document Identifier
@@ -43,6 +47,7 @@ type
     Uri: string;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPTextDocumentIdentifier; static;
+    function ToString: string;
   end;
 
   // LSP Text Document Item (didOpen)
@@ -53,16 +58,19 @@ type
     Text: string;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPTextDocumentItem; static;
+    function ToString: string;
+    function GetTextPreview(MaxLength: Integer = 100): string;
   end;
 
   // LSP Versioned Text Document Identifier (version: integer | null)
   TLSPVersionedTextDocumentIdentifier = record
     Uri: string;
     Version: Integer; // valid only when IsNull = False
-	IsNull: Boolean;  // True = version is null
+    IsNull: Boolean;  // True = version is null
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPVersionedTextDocumentIdentifier; static;
     class function Default: TLSPVersionedTextDocumentIdentifier; static;
+    function ToString: string;
   end;
 
   // LSP Text Document Position Params
@@ -71,16 +79,18 @@ type
     Position: TLSPPosition;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPTextDocumentPositionParams; static;
+    function ToString: string;
   end;
 
   TLSPDefinitionParams = TLSPTextDocumentPositionParams;
-  TLSPHoverParams      = TLSPTextDocumentPositionParams;
+  TLSPHoverParams = TLSPTextDocumentPositionParams;
 
   // LSP References Context
   TLSPReferenceContext = record
     IncludeDeclaration: Boolean;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPReferenceContext; static;
+    function ToString: string;
   end;
 
   // LSP References Params
@@ -90,6 +100,7 @@ type
     Context: TLSPReferenceContext;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPReferenceParams; static;
+    function ToString: string;
   end;
 
   // LSP Markup Content and legacy MarkedString/MarkedString[]
@@ -100,6 +111,7 @@ type
     class function FromJSON(AJson: TJSONValue; out IsValid: Boolean): TLSPMarkupContent; static;
     function IsEmpty: Boolean;
     class function Default: TLSPMarkupContent; static;
+    function ToString: string;
   end;
 
   // LSP Hover
@@ -109,6 +121,7 @@ type
     HasRange: Boolean;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPHover; static;
+    function ToString: string;
   end;
 
   // LSP Completion Context
@@ -117,6 +130,7 @@ type
     TriggerCharacter: string; // valid only when TriggerKind = 2, single UTF-16 code unit
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPCompletionContext; static;
+    function ToString: string;
   end;
 
   // LSP Completion Params
@@ -125,8 +139,9 @@ type
     Position: TLSPPosition;
     Context: TLSPCompletionContext;
     HasContext: Boolean;
-	function ToJSON: TJSONObject;
+    function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPCompletionParams; static;
+    function ToString: string;
   end;
 
   // LSP Completion Item
@@ -139,6 +154,7 @@ type
     InsertText: string;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPCompletionItem; static;
+    function ToString: string;
   end;
 
   // LSP Workspace Symbol Params
@@ -146,6 +162,7 @@ type
     Query: string;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPWorkspaceSymbolParams; static;
+    function ToString: string;
   end;
 
   // LSP Symbol Information
@@ -156,32 +173,35 @@ type
     ContainerName: string;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPSymbolInformation; static;
+    function ToString: string;
   end;
 
   // LSP Initialize Params
   TLSPInitializeParams = class
   public
     ProcessId: Integer;
-    HasProcessId: Boolean; // true if processId is a number (including 0)
-    RootUri: string;       // string when HasRootUri and not null, '' when HasRootUri and null
-    HasRootUri: Boolean;   // distinguishes missing vs present (string|null)
-    Capabilities: TJSONObject;         // owned, required
-    InitializationOptions: TJSONObject; // owned, optional
+    HasProcessId: Boolean;
+    RootUri: string;
+    HasRootUri: Boolean;
+    Capabilities: TJSONObject;
+    InitializationOptions: TJSONObject;
     constructor Create;
     destructor Destroy; override;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPInitializeParams; static;
+    function ToString: string;
   end;
 
   // LSP Initialize Result
   TLSPInitializeResult = class
   public
-    Capabilities: TJSONObject; // owned, required
-    ServerInfo: TJSONObject;   // owned, optional
+    Capabilities: TJSONObject;
+    ServerInfo: TJSONObject;
     constructor Create;
     destructor Destroy; override;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPInitializeResult; static;
+    function ToString: string;
   end;
 
   // LSP Did Open Text Document Params
@@ -189,18 +209,20 @@ type
     TextDocument: TLSPTextDocumentItem;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPDidOpenTextDocumentParams; static;
+    function ToString: string;
   end;
 
   // LSP Text Document Content Change Event
   TLSPTextDocumentContentChangeEvent = record
     Range: TLSPRange;
     HasRange: Boolean;
-    RangeLength: Integer;   // uinteger in spec; we clamp to >= 0
+    RangeLength: Integer;
     HasRangeLength: Boolean;
     Text: string;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPTextDocumentContentChangeEvent; static;
     class function Empty: TLSPTextDocumentContentChangeEvent; static;
+    function ToString: string;
   end;
 
   // LSP Did Change Text Document Params
@@ -209,6 +231,7 @@ type
     ContentChanges: TArray<TLSPTextDocumentContentChangeEvent>;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPDidChangeTextDocumentParams; static;
+    function ToString: string;
   end;
 
   // LSP Did Close Text Document Params
@@ -216,6 +239,7 @@ type
     TextDocument: TLSPTextDocumentIdentifier;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPDidCloseTextDocumentParams; static;
+    function ToString: string;
   end;
 
 implementation
@@ -253,6 +277,11 @@ begin
              AJson.TryGetValue<Integer>('character', Result.Character);
 end;
 
+function TLSPPosition.ToString: string;
+begin
+  Result := Format('(%d,%d)', [Line, Character]);
+end;
+
 { TLSPRange }
 
 class function TLSPRange.Default: TLSPRange;
@@ -287,9 +316,14 @@ begin
   if Val is TJSONObject then
     Result.&End := TLSPPosition.FromJSON(TJSONObject(Val), Ok2)
   else
-    Exit;
+	Exit;
 
   IsValid := Ok1 and Ok2;
+end;
+
+function TLSPRange.ToString: string;
+begin
+  Result := Format('Range(%s -> %s)', [Start.ToString, &End.ToString]);
 end;
 
 { TLSPLocation }
@@ -320,6 +354,11 @@ begin
     IsValid := False;
 end;
 
+function TLSPLocation.ToString: string;
+begin
+  Result := Format('Location(%s, %s)', [Uri, Range.ToString]);
+end;
+
 { TLSPTextDocumentIdentifier }
 
 function TLSPTextDocumentIdentifier.ToJSON: TJSONObject;
@@ -332,6 +371,11 @@ class function TLSPTextDocumentIdentifier.FromJSON(AJson: TJSONObject; out IsVal
 begin
   Result.Uri := '';
   IsValid := Assigned(AJson) and AJson.TryGetValue<string>('uri', Result.Uri);
+end;
+
+function TLSPTextDocumentIdentifier.ToString: string;
+begin
+  Result := Format('TextDocument(%s)', [Uri]);
 end;
 
 { TLSPTextDocumentItem }
@@ -361,6 +405,20 @@ begin
   Ok3 := AJson.TryGetValue<Integer>('version', Result.Version);
   Ok4 := AJson.TryGetValue<string>('text', Result.Text);
   IsValid := Ok1 and Ok2 and Ok3 and Ok4;
+end;
+
+function TLSPTextDocumentItem.ToString: string;
+begin
+  Result := Format('TextDocumentItem(%s, lang=%s, version=%d, size=%d)',
+    [Uri, LanguageId, Version, Length(Text)]);
+end;
+
+function TLSPTextDocumentItem.GetTextPreview(MaxLength: Integer = 100): string;
+begin
+  if Length(Text) <= MaxLength then
+    Result := Text
+  else
+    Result := Copy(Text, 1, MaxLength) + '...';
 end;
 
 { TLSPVersionedTextDocumentIdentifier }
@@ -410,6 +468,14 @@ begin
     IsValid := False;
 end;
 
+function TLSPVersionedTextDocumentIdentifier.ToString: string;
+begin
+  if IsNull then
+    Result := Format('VersionedTextDocument(%s, version=null)', [Uri])
+  else
+    Result := Format('VersionedTextDocument(%s, version=%d)', [Uri, Version]);
+end;
+
 { TLSPTextDocumentPositionParams }
 
 function TLSPTextDocumentPositionParams.ToJSON: TJSONObject;
@@ -443,6 +509,11 @@ begin
   IsValid := Ok1 and Ok2;
 end;
 
+function TLSPTextDocumentPositionParams.ToString: string;
+begin
+  Result := Format('TextDocumentPosition(%s, pos=%s)', [TextDocument.ToString, Position.ToString]);
+end;
+
 { TLSPReferenceContext }
 
 function TLSPReferenceContext.ToJSON: TJSONObject;
@@ -457,6 +528,11 @@ begin
   Result.IncludeDeclaration := False;
   IsValid := Assigned(AJson) and
              AJson.TryGetValue<Boolean>('includeDeclaration', Result.IncludeDeclaration);
+end;
+
+function TLSPReferenceContext.ToString: string;
+begin
+  Result := Format('ReferenceContext(includeDecl=%s)', [BoolToStr(IncludeDeclaration, True)]);
 end;
 
 { TLSPReferenceParams }
@@ -499,6 +575,12 @@ begin
   IsValid := Ok1 and Ok2 and Ok3;
 end;
 
+function TLSPReferenceParams.ToString: string;
+begin
+  Result := Format('ReferenceParams(%s, pos=%s, %s)',
+    [TextDocument.ToString, Position.ToString, Context.ToString]);
+end;
+
 { TLSPMarkupContent }
 
 function TLSPMarkupContent.ToJSON: TJSONObject;
@@ -519,8 +601,7 @@ begin
   Result.Value := '';
 end;
 
-class function TLSPMarkupContent.FromJSON(
-  AJson: TJSONValue; out IsValid: Boolean): TLSPMarkupContent;
+class function TLSPMarkupContent.FromJSON(AJson: TJSONValue; out IsValid: Boolean): TLSPMarkupContent;
 var
   Obj: TJSONObject;
   Arr: TJSONArray;
@@ -537,18 +618,18 @@ begin
   if AJson is TJSONObject then
   begin
     Obj := TJSONObject(AJson);
-    KindVal  := Obj.GetValue('kind');
+    KindVal := Obj.GetValue('kind');
     ValueVal := Obj.GetValue('value');
     if (KindVal is TJSONString) and (ValueVal is TJSONString) then
-    begin
-      Result.Kind  := TJSONString(KindVal).Value;
+	begin
+      Result.Kind := TJSONString(KindVal).Value;
       Result.Value := TJSONString(ValueVal).Value;
       IsValid := (Result.Kind = 'plaintext') or (Result.Kind = 'markdown');
     end;
   end
   else if AJson is TJSONString then
   begin
-    Result.Kind  := 'plaintext';
+    Result.Kind := 'plaintext';
     Result.Value := TJSONString(AJson).Value;
     IsValid := True;
   end
@@ -583,6 +664,14 @@ begin
   end;
 end;
 
+function TLSPMarkupContent.ToString: string;
+begin
+  if IsEmpty then
+    Result := 'MarkupContent(empty)'
+  else
+    Result := Format('MarkupContent(%s, len=%d)', [Kind, Length(Value)]);
+end;
+
 { TLSPHover }
 
 function TLSPHover.ToJSON: TJSONObject;
@@ -593,15 +682,14 @@ begin
     Result.AddPair('range', Range.ToJSON);
 end;
 
-class function TLSPHover.FromJSON(
-  AJson: TJSONObject; out IsValid: Boolean): TLSPHover;
+class function TLSPHover.FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPHover;
 var
   Val: TJSONValue;
   Ok: Boolean;
 begin
   Result.HasRange := False;
   Result.Contents := TLSPMarkupContent.Default;
-  Result.Range    := TLSPRange.Default;
+  Result.Range := TLSPRange.Default;
   IsValid := False;
   if not Assigned(AJson) then Exit;
 
@@ -621,6 +709,11 @@ begin
     IsValid := True;
 end;
 
+function TLSPHover.ToString: string;
+begin
+  Result := Format('Hover(%s, hasRange=%s)', [Contents.ToString, BoolToStr(HasRange, True)]);
+end;
+
 { TLSPCompletionContext }
 
 function TLSPCompletionContext.ToJSON: TJSONObject;
@@ -631,8 +724,7 @@ begin
     Result.AddPair('triggerCharacter', TriggerCharacter);
 end;
 
-class function TLSPCompletionContext.FromJSON(
-  AJson: TJSONObject; out IsValid: Boolean): TLSPCompletionContext;
+class function TLSPCompletionContext.FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPCompletionContext;
 var
   TempChar: string;
 begin
@@ -653,6 +745,11 @@ begin
   end;
 end;
 
+function TLSPCompletionContext.ToString: string;
+begin
+  Result := Format('CompletionContext(kind=%d, char=%s)', [TriggerKind, TriggerCharacter]);
+end;
+
 { TLSPCompletionParams }
 
 function TLSPCompletionParams.ToJSON: TJSONObject;
@@ -664,8 +761,7 @@ begin
     Result.AddPair('context', Context.ToJSON);
 end;
 
-class function TLSPCompletionParams.FromJSON(
-  AJson: TJSONObject; out IsValid: Boolean): TLSPCompletionParams;
+class function TLSPCompletionParams.FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPCompletionParams;
 var
   Val: TJSONValue;
   Ok1, Ok2, Ok3: Boolean;
@@ -696,6 +792,12 @@ begin
   IsValid := Ok1 and Ok2;
 end;
 
+function TLSPCompletionParams.ToString: string;
+begin
+  Result := Format('CompletionParams(%s, pos=%s, hasContext=%s)',
+    [TextDocument.ToString, Position.ToString, BoolToStr(HasContext, True)]);
+end;
+
 { TLSPCompletionItem }
 
 function TLSPCompletionItem.ToJSON: TJSONObject;
@@ -712,8 +814,7 @@ begin
     Result.AddPair('insertText', InsertText);
 end;
 
-class function TLSPCompletionItem.FromJSON(
-  AJson: TJSONObject; out IsValid: Boolean): TLSPCompletionItem;
+class function TLSPCompletionItem.FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPCompletionItem;
 var
   Val: TJSONValue;
   Ok: Boolean;
@@ -742,6 +843,12 @@ begin
   end;
 end;
 
+function TLSPCompletionItem.ToString: string;
+begin
+  Result := Format('CompletionItem(label="%s", kind=%d, detail="%s", hasDoc=%s)',
+    [Label_, Kind, Detail, BoolToStr(HasDocumentation, True)]);
+end;
+
 { TLSPWorkspaceSymbolParams }
 
 function TLSPWorkspaceSymbolParams.ToJSON: TJSONObject;
@@ -750,11 +857,15 @@ begin
   Result.AddPair('query', Query);
 end;
 
-class function TLSPWorkspaceSymbolParams.FromJSON(
-  AJson: TJSONObject; out IsValid: Boolean): TLSPWorkspaceSymbolParams;
+class function TLSPWorkspaceSymbolParams.FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPWorkspaceSymbolParams;
 begin
   Result.Query := '';
   IsValid := Assigned(AJson) and AJson.TryGetValue<string>('query', Result.Query);
+end;
+
+function TLSPWorkspaceSymbolParams.ToString: string;
+begin
+  Result := Format('WorkspaceSymbolParams(query="%s")', [Query]);
 end;
 
 { TLSPSymbolInformation }
@@ -769,8 +880,7 @@ begin
     Result.AddPair('containerName', ContainerName);
 end;
 
-class function TLSPSymbolInformation.FromJSON(
-  AJson: TJSONObject; out IsValid: Boolean): TLSPSymbolInformation;
+class function TLSPSymbolInformation.FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPSymbolInformation;
 var
   Val: TJSONValue;
   Ok1, Ok2, Ok3: Boolean;
@@ -792,6 +902,12 @@ begin
     Ok3 := False;
 
   IsValid := Ok1 and Ok2 and Ok3;
+end;
+
+function TLSPSymbolInformation.ToString: string;
+begin
+  Result := Format('Symbol(name="%s", kind=%d, container="%s", %s)',
+    [Name, Kind, ContainerName, Location.ToString]);
 end;
 
 { TLSPInitializeParams }
@@ -840,8 +956,7 @@ begin
     Result.AddPair('initializationOptions', InitializationOptions.Clone as TJSONObject);
 end;
 
-class function TLSPInitializeParams.FromJSON(
-  AJson: TJSONObject; out IsValid: Boolean): TLSPInitializeParams;
+class function TLSPInitializeParams.FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPInitializeParams;
 var
   Val: TJSONValue;
 begin
@@ -872,15 +987,34 @@ begin
 
   Val := AJson.GetValue('capabilities');
   if Val is TJSONObject then
-    Result.Capabilities := TJSONObject(Val).Clone as TJSONObject
+	Result.Capabilities := TJSONObject(Val).Clone as TJSONObject
   else
-    Exit; // capabilities is required
+    Exit;
 
   Val := AJson.GetValue('initializationOptions');
   if Val is TJSONObject then
     Result.InitializationOptions := TJSONObject(Val).Clone as TJSONObject;
 
   IsValid := True;
+end;
+
+function TLSPInitializeParams.ToString: string;
+var
+  PidStr: string;
+  RootStr: string;
+begin
+  if HasProcessId then
+    PidStr := IntToStr(ProcessId)
+  else
+    PidStr := 'null';
+
+  if HasRootUri then
+    RootStr := RootUri
+  else
+    RootStr := 'null';
+
+  Result := Format('InitializeParams(pid=%s, rootUri=%s, hasCap=%s)',
+    [PidStr, RootStr, BoolToStr(Assigned(Capabilities), True)]);
 end;
 
 { TLSPInitializeResult }
@@ -907,11 +1041,10 @@ begin
   else
     Result.AddPair('capabilities', TJSONObject.Create);
   if Assigned(ServerInfo) then
-	Result.AddPair('serverInfo', ServerInfo.Clone as TJSONObject);
+    Result.AddPair('serverInfo', ServerInfo.Clone as TJSONObject);
 end;
 
-class function TLSPInitializeResult.FromJSON(
-  AJson: TJSONObject; out IsValid: Boolean): TLSPInitializeResult;
+class function TLSPInitializeResult.FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPInitializeResult;
 var
   Val: TJSONValue;
 begin
@@ -923,13 +1056,19 @@ begin
   if Val is TJSONObject then
     Result.Capabilities := TJSONObject(Val).Clone as TJSONObject
   else
-    Exit; // capabilities required by spec
+    Exit;
 
   Val := AJson.GetValue('serverInfo');
   if Val is TJSONObject then
     Result.ServerInfo := TJSONObject(Val).Clone as TJSONObject;
 
   IsValid := True;
+end;
+
+function TLSPInitializeResult.ToString: string;
+begin
+  Result := Format('InitializeResult(hasCap=%s, hasInfo=%s)',
+    [BoolToStr(Assigned(Capabilities), True), BoolToStr(Assigned(ServerInfo), True)]);
 end;
 
 { TLSPDidOpenTextDocumentParams }
@@ -940,8 +1079,7 @@ begin
   Result.AddPair('textDocument', TextDocument.ToJSON);
 end;
 
-class function TLSPDidOpenTextDocumentParams.FromJSON(
-  AJson: TJSONObject; out IsValid: Boolean): TLSPDidOpenTextDocumentParams;
+class function TLSPDidOpenTextDocumentParams.FromJSON(AJson: TJSONObject; out IsValid: Boolean): TLSPDidOpenTextDocumentParams;
 var
   Val: TJSONValue;
 begin
@@ -953,6 +1091,11 @@ begin
   begin
     Result.TextDocument := TLSPTextDocumentItem.FromJSON(TJSONObject(Val), IsValid);
   end;
+end;
+
+function TLSPDidOpenTextDocumentParams.ToString: string;
+begin
+  Result := Format('DidOpenTextDocument(%s)', [TextDocument.ToString]);
 end;
 
 { TLSPTextDocumentContentChangeEvent }
@@ -1005,6 +1148,12 @@ begin
   end;
 
   IsValid := AJson.TryGetValue<string>('text', Result.Text);
+end;
+
+function TLSPTextDocumentContentChangeEvent.ToString: string;
+begin
+  Result := Format('ContentChange(hasRange=%s, len=%d, textLen=%d)',
+    [BoolToStr(HasRange, True), RangeLength, Length(Text)]);
 end;
 
 { TLSPDidChangeTextDocumentParams }
@@ -1063,6 +1212,12 @@ begin
   end;
 end;
 
+function TLSPDidChangeTextDocumentParams.ToString: string;
+begin
+  Result := Format('DidChangeTextDocument(%s, changes=%d)',
+    [TextDocument.ToString, Length(ContentChanges)]);
+end;
+
 { TLSPDidCloseTextDocumentParams }
 
 function TLSPDidCloseTextDocumentParams.ToJSON: TJSONObject;
@@ -1084,6 +1239,11 @@ begin
   begin
     Result.TextDocument := TLSPTextDocumentIdentifier.FromJSON(TJSONObject(Val), IsValid);
   end;
+end;
+
+function TLSPDidCloseTextDocumentParams.ToString: string;
+begin
+  Result := Format('DidCloseTextDocument(%s)', [TextDocument.ToString]);
 end;
 
 end.

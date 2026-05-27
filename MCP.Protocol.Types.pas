@@ -7,7 +7,8 @@ unit MCP.Protocol.Types;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.JSON, System.Generics.Collections;
+  System.SysUtils, System.Classes, System.JSON, System.Generics.Collections,
+  Common.Logging;
 
 type
   TMCPProtocolVersion = string;
@@ -21,6 +22,7 @@ type
     Version: string;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TMCPClientInfo; static;
+    function ToString: string;
   end;
 
   TMCPServerInfo = record
@@ -28,12 +30,14 @@ type
     Version: string;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TMCPServerInfo; static;
+    function ToString: string;
   end;
 
   TMCPToolsCapability = record
     ListChanged: Boolean;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject): TMCPToolsCapability; static;
+    function ToString: string;
   end;
 
   TMCPCapabilities = record
@@ -45,9 +49,11 @@ type
     HasPrompts: Boolean;
     Roots: TMCPToolsCapability;
     HasRoots: Boolean;
-    HasSampling: Boolean; // FIX: Was Boolean, spec says object
+    HasSampling: Boolean;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject): TMCPCapabilities; static;
+    function ToString: string;
+    function GetEnabledCapabilities: TArray<string>;
   end;
 
   TMCPInitializeParams = record
@@ -56,6 +62,7 @@ type
     ClientInfo: TMCPClientInfo;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TMCPInitializeParams; static;
+    function ToString: string;
   end;
 
   TMCPInitializeResult = record
@@ -66,6 +73,7 @@ type
     HasInstructions: Boolean;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TMCPInitializeResult; static;
+    function ToString: string;
   end;
 
   TMCPToolInputSchema = class
@@ -77,6 +85,7 @@ type
     destructor Destroy; override;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TMCPToolInputSchema; static;
+    function ToString: string;
   end;
 
   TMCPTool = class
@@ -88,6 +97,7 @@ type
     destructor Destroy; override;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TMCPTool; static;
+    function ToString: string;
   end;
 
   TMCPToolCallParams = class
@@ -98,6 +108,7 @@ type
     destructor Destroy; override;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TMCPToolCallParams; static;
+    function ToString: string;
   end;
 
   TMCPContentItem = class
@@ -106,18 +117,23 @@ type
     Text: string;
     Data: string; // base64 for image
     MimeType: string;
+    constructor Create;
+    destructor Destroy; override;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TMCPContentItem; static;
+    function ToString: string;
   end;
 
   TMCPToolCallResult = class
   public
     Content: TObjectList<TMCPContentItem>; // Owned
     IsError: Boolean;
-    constructor Create;
+	constructor Create;
     destructor Destroy; override;
     function ToJSON: TJSONObject;
     class function FromJSON(AJson: TJSONObject; out IsValid: Boolean): TMCPToolCallResult; static;
+    function ToString: string;
+    function GetContentText: string;
   end;
 
 implementation
@@ -143,6 +159,11 @@ begin
     AJson.TryGetValue<string>('version', Result.Version);
 end;
 
+function TMCPClientInfo.ToString: string;
+begin
+  Result := Format('Client: %s v%s', [Name, Version]);
+end;
+
 { TMCPServerInfo }
 
 function TMCPServerInfo.ToJSON: TJSONObject;
@@ -164,6 +185,11 @@ begin
     AJson.TryGetValue<string>('version', Result.Version);
 end;
 
+function TMCPServerInfo.ToString: string;
+begin
+  Result := Format('Server: %s v%s', [Name, Version]);
+end;
+
 { TMCPToolsCapability }
 
 function TMCPToolsCapability.ToJSON: TJSONObject;
@@ -180,6 +206,11 @@ begin
     AJson.TryGetValue<Boolean>('listChanged', Result.ListChanged);
 end;
 
+function TMCPToolsCapability.ToString: string;
+begin
+  Result := Format('ToolsCapability(listChanged=%s)', [BoolToStr(ListChanged, True)]);
+end;
+
 { TMCPCapabilities }
 
 function TMCPCapabilities.ToJSON: TJSONObject;
@@ -194,7 +225,7 @@ begin
   if HasRoots then
     Result.AddPair('roots', Roots.ToJSON);
   if HasSampling then
-    Result.AddPair('sampling', TJSONObject.Create); // FIX: Empty object per spec
+    Result.AddPair('sampling', TJSONObject.Create);
 end;
 
 class function TMCPCapabilities.FromJSON(AJson: TJSONObject): TMCPCapabilities;
@@ -237,7 +268,59 @@ begin
     Result.HasRoots := True;
   end;
 
-  Result.HasSampling := Assigned(AJson.GetValue('sampling')); // FIX: Check existence
+  Result.HasSampling := Assigned(AJson.GetValue('sampling'));
+end;
+
+function TMCPCapabilities.GetEnabledCapabilities: TArray<string>;
+begin
+  SetLength(Result, 0);
+  if HasTools then
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := 'tools';
+  end;
+  if HasResources then
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := 'resources';
+  end;
+  if HasPrompts then
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := 'prompts';
+  end;
+  if HasRoots then
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := 'roots';
+  end;
+  if HasSampling then
+  begin
+    SetLength(Result, Length(Result) + 1);
+    Result[High(Result)] := 'sampling';
+  end;
+end;
+
+function TMCPCapabilities.ToString: string;
+var
+  Caps: string;
+  I: Integer;
+  Enabled: TArray<string>;
+begin
+  Enabled := GetEnabledCapabilities;
+  if Length(Enabled) = 0 then
+    Caps := 'none'
+  else
+  begin
+    Caps := '';
+    for I := 0 to High(Enabled) do
+    begin
+      if I > 0 then
+        Caps := Caps + ', ';
+      Caps := Caps + Enabled[I];
+    end;
+  end;
+  Result := Format('Capabilities(%s)', [Caps]);
 end;
 
 { TMCPInitializeParams }
@@ -276,6 +359,12 @@ begin
     Exit;
 
   IsValid := OkClient;
+end;
+
+function TMCPInitializeParams.ToString: string;
+begin
+  Result := Format('InitializeParams(version=%s, %s, %s)',
+    [ProtocolVersion, ClientInfo.ToString, Capabilities.ToString]);
 end;
 
 { TMCPInitializeResult }
@@ -320,16 +409,32 @@ begin
   Result.HasInstructions := AJson.TryGetValue<string>('instructions', Result.Instructions);
 end;
 
+function TMCPInitializeResult.ToString: string;
+var
+  InstructionsStr: string;
+begin
+  if HasInstructions then
+    InstructionsStr := ', has instructions'
+  else
+    InstructionsStr := '';
+  Result := Format('InitializeResult(version=%s, %s, %s%s)',
+    [ProtocolVersion, ServerInfo.ToString, Capabilities.ToString, InstructionsStr]);
+end;
+
 { TMCPToolInputSchema }
 
 constructor TMCPToolInputSchema.Create;
 begin
-  inherited;
+  inherited Create;
   Properties := nil;
+  Logger.Debug('[MCP.Protocol] ToolInputSchema created');
 end;
 
 destructor TMCPToolInputSchema.Destroy;
 begin
+  if Assigned(Properties) then
+    Logger.Debug('[MCP.Protocol] ToolInputSchema destroyed with %d properties',
+      [Properties.Count]);
   Properties.Free;
   inherited;
 end;
@@ -386,16 +491,33 @@ begin
   end;
 end;
 
+function TMCPToolInputSchema.ToString: string;
+var
+  PropCount: Integer;
+begin
+  if Assigned(Properties) then
+    PropCount := Properties.Count
+  else
+    PropCount := 0;
+  Result := Format('InputSchema(type=%s, props=%d, required=%d)',
+    [SchemaType, PropCount, Length(Required)]);
+end;
+
 { TMCPTool }
 
 constructor TMCPTool.Create;
 begin
-  inherited;
+  inherited Create;
   InputSchema := nil;
+  Logger.Debug('[MCP.Protocol] Tool created');
 end;
 
 destructor TMCPTool.Destroy;
 begin
+  if Assigned(InputSchema) then
+    Logger.Debug('[MCP.Protocol] Tool "%s" destroyed with schema', [Name])
+  else
+    Logger.Debug('[MCP.Protocol] Tool "%s" destroyed', [Name]);
   InputSchema.Free;
   inherited;
 end;
@@ -405,7 +527,7 @@ begin
   Result := TJSONObject.Create;
   Result.AddPair('name', Name);
   Result.AddPair('description', Description);
-  if Assigned(InputSchema) then // FIX: inputSchema optional
+  if Assigned(InputSchema) then
     Result.AddPair('inputSchema', InputSchema.ToJSON);
 end;
 
@@ -443,19 +565,29 @@ begin
     end;
   end
   else
-    IsValid := True; // FIX: inputSchema is optional per MCP spec
+    IsValid := True;
+end;
+
+function TMCPTool.ToString: string;
+begin
+  Result := Format('Tool(name="%s", desc="%s", hasSchema=%s)',
+    [Name, Copy(Description, 1, 50), BoolToStr(Assigned(InputSchema), True)]);
 end;
 
 { TMCPToolCallParams }
 
 constructor TMCPToolCallParams.Create;
 begin
-  inherited;
+  inherited Create;
   Arguments := nil;
+  Logger.Debug('[MCP.Protocol] ToolCallParams created');
 end;
 
 destructor TMCPToolCallParams.Destroy;
 begin
+  if Assigned(Arguments) then
+    Logger.Debug('[MCP.Protocol] ToolCallParams for "%s" destroyed with %d arguments',
+      [Name, Arguments.Count]);
   Arguments.Free;
   inherited;
 end;
@@ -492,7 +624,26 @@ begin
     Result.Arguments := TJSONObject(Val).Clone as TJSONObject;
 end;
 
+function TMCPToolCallParams.ToString: string;
+begin
+  Result := Format('ToolCall(name="%s", hasArgs=%s)',
+    [Name, BoolToStr(Assigned(Arguments), True)]);
+end;
+
 { TMCPContentItem }
+
+constructor TMCPContentItem.Create;
+begin
+  inherited Create;
+  Logger.Debug('[MCP.Protocol] ContentItem created');
+end;
+
+destructor TMCPContentItem.Destroy;
+begin
+  Logger.Debug('[MCP.Protocol] ContentItem "%s" destroyed (size=%d)',
+    [ContentType, Length(Text) + Length(Data)]);
+  inherited;
+end;
 
 function TMCPContentItem.ToJSON: TJSONObject;
 begin
@@ -504,10 +655,6 @@ begin
   begin
     Result.AddPair('data', Data);
     Result.AddPair('mimeType', MimeType);
-  end
-  else if ContentType = 'resource' then
-  begin
-    // Spec extension point: resource content
   end;
 end;
 
@@ -534,24 +681,34 @@ begin
   begin
     AJson.TryGetValue<string>('data', Result.Data);
     AJson.TryGetValue<string>('mimeType', Result.MimeType);
-  end
-  else if Result.ContentType = 'resource' then
-  begin
-    // Spec extension point
   end;
+end;
+
+function TMCPContentItem.ToString: string;
+begin
+  if ContentType = 'text' then
+    Result := Format('TextContent(len=%d, preview="%s")',
+      [Length(Text), Copy(Text, 1, 50)])
+  else if ContentType = 'image' then
+    Result := Format('ImageContent(mime=%s, dataLen=%d)', [MimeType, Length(Data)])
+  else
+    Result := Format('Content(type=%s)', [ContentType]);
 end;
 
 { TMCPToolCallResult }
 
 constructor TMCPToolCallResult.Create;
 begin
-  inherited;
+  inherited Create;
   Content := TObjectList<TMCPContentItem>.Create(True);
   IsError := False;
+  Logger.Debug('[MCP.Protocol] ToolCallResult created');
 end;
 
 destructor TMCPToolCallResult.Destroy;
 begin
+  Logger.Debug('[MCP.Protocol] ToolCallResult destroyed (content=%d, isError=%s)',
+    [Content.Count, BoolToStr(IsError, True)]);
   Content.Free;
   inherited;
 end;
@@ -607,6 +764,28 @@ begin
   Result.IsError := False;
   AJson.TryGetValue<Boolean>('isError', Result.IsError);
   IsValid := True;
+end;
+
+function TMCPToolCallResult.ToString: string;
+begin
+  Result := Format('ToolCallResult(content=%d, isError=%s)',
+    [Content.Count, BoolToStr(IsError, True)]);
+end;
+
+function TMCPToolCallResult.GetContentText: string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 0 to Content.Count - 1 do
+  begin
+    if Content[I].ContentType = 'text' then
+    begin
+      if Result <> '' then
+        Result := Result + sLineBreak;
+      Result := Result + Content[I].Text;
+    end;
+  end;
 end;
 
 end.

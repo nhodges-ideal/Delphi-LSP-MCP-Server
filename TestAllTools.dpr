@@ -1,6 +1,321 @@
-program TestAllTools;
+﻿program TestAllTools;
 
 {$APPTYPE CONSOLE}
+
+{
+  ============================================================================
+  TESTALLTOOLS - Delphi LSP MCP Server Test Suite
+  ============================================================================
+
+  This test program validates the functionality of the Delphi LSP MCP Server.
+  It tests MCP protocol compliance and all LSP tool operations including:
+  - Goto Definition
+  - Find References
+  - Hover Information
+  - Code Completion
+  - Workspace Symbols
+
+
+  QUICK START
+  ===========
+
+  Run all tests (launches server automatically):
+    TestAllTools.exe
+
+
+  COMMAND LINE OPTIONS
+  ====================
+
+  --help              Show this help message
+  --wait              Launch server with --wait flag for debugging server startup code
+
+
+  NORMAL TEST RUN (No Debugging)
+  ==============================
+
+  Just run: TestAllTools.exe
+
+  The server will start normally without waiting for debugger attachment.
+  Use this for quick validation when you don't need to debug the server.
+
+
+  DEBUGGING WITH TWO DELPHI IDEs (RECOMMENDED METHOD)
+  ===================================================
+
+  This is the MOST POWERFUL way to debug. You can debug BOTH the test program
+  AND the server simultaneously, each in its own IDE with its own debugger.
+
+  WHY TWO IDEs?
+  -------------
+  - Each Delphi IDE can only debug ONE process at a time
+  - Test program needs debugging? Run it from IDE 1
+  - Server needs debugging? Attach IDE 2 to the server process
+  - Two IDEs = two debuggers = both processes debuggable simultaneously
+
+
+  STEP-BY-STEP INSTRUCTIONS (with --wait for full debugging)
+  ----------------------------------------------------------
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ IDE 1: TEST PROGRAM (THIS TEST)                                        │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                                                                         │
+  │ 1. Open TestAllTools.dpr in Delphi IDE (Instance #1)                    │
+  │                                                                         │
+  │ 2. Set breakpoints in test code if needed                               │
+  │                                                                         │
+  │ 3. Go to Run -> Parameters                                              │
+  │    Enter: --wait                                                        │
+  │                                                                         │
+  │ 4. Press F9 to run the test program                                     │
+  │                                                                         │
+  │ 5. The test program will:                                               │
+  │    - Launch DelphiLSPMCPServer.exe with --wait flag                     │
+  │    - Display: "Server started successfully! PID: 12345"                 │
+  │    - Display debugging instructions                                     │
+  │    - WAIT with: "Press Enter after debugger is attached..."             │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ IDE 2: MCP LSP SERVER                                                   │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                                                                         │
+  │ 1. Open DelphiLSPMCPServer.dpr in a SEPARATE Delphi IDE (Instance #2)   │
+  │                                                                         │
+  │ 2. Set breakpoints in server code (including initialization)            │
+  │                                                                         │
+  │ 3. Go to Run -> Attach to Process                                       │
+  │                                                                         │
+  │ 4. Find the process with the PID shown in IDE 1 (12345 in this example) │
+  │    - Look for DelphiLSPMCPServer.exe                                    │
+  │                                                                         │
+  │ 5. Click "Attach"                                                       │
+  │                                                                         │
+  │ 6. Press F9 to let the server continue running                          │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ BACK TO IDE 1: TEST PROGRAM                                             │
+  ├─────────────────────────────────────────────────────────────────────────┤
+  │                                                                         │
+  │ 1. Press Enter in the test console (where it was waiting)               │
+  │                                                                         │
+  │ 2. The tests will begin to run                                          │
+  │                                                                         │
+  │ 3. When the test calls the server, breakpoints in IDE 2 will hit!       │
+  │                                                                         │
+  │ 4. You can now step through server code (F7/F8/F9) and inspect          │
+  │    variables by hovering over them                                      │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+
+  WITHOUT --wait (Debug Message Handling Only)
+  --------------------------------------------
+
+  If you only need to debug message handling (not server startup):
+
+  1. Run TestAllTools.exe (without --wait)
+  2. Follow the same Two-IDEs steps above
+  3. Breakpoints will hit in message handlers (HandleMessage, HandleToolsCall, etc.)
+  4. But NOT in server initialization code (constructor, etc.)
+
+
+  SINGLE IDE DEBUGGING (SERVER ONLY)
+  ===================================
+
+  If you only need to debug the server (and trust the test to work correctly):
+
+  1. Run TestAllTools.exe from Command Prompt (NOT from Delphi IDE)
+  2. Note the Server PID shown
+  3. Open DelphiLSPMCPServer.dpr in Delphi IDE
+  4. Go to Run -> Attach to Process
+  5. Select the PID from step 2
+  6. Set breakpoints in server code
+  7. Press F9 to continue
+  8. Tests will run and breakpoints will hit
+
+  LIMITATION: In this method, the test program runs freely without a debugger.
+              You can ONLY debug the server. The test program is NOT under
+              debugger control.
+
+  WHAT YOU CANNOT DO WITH SINGLE IDE (Server Only):
+  - Set breakpoints in test code
+  - Step through test program execution
+  - Inspect test program variables
+  - Debug test program logic
+
+
+  SINGLE IDE DEBUGGING (TEST ONLY)
+  =================================
+
+  If you only need to debug the test program (and trust the server):
+
+  1. Open TestAllTools.dpr in Delphi IDE
+  2. Set breakpoints in test code
+  3. Press F9 to run
+  4. The test will launch the server and run
+  5. Breakpoints will hit in test code
+
+  LIMITATION: In this method, the server runs freely without a debugger.
+			  You can ONLY debug the test program. The server is NOT under
+              debugger control.
+
+  WHAT YOU CANNOT DO WITH SINGLE IDE (Test Only):
+  - Set breakpoints in server code
+  - Step through server execution
+  - Inspect server variables
+  - Debug server logic
+
+
+  COMPARISON TABLE
+  ================
+
+  +---------------------+------------------+------------------+------------------+
+  | Aspect              | Two IDEs         | Single IDE       | Single IDE       |
+  |                     | (Recommended)    | (Server Only)    | (Test Only)      |
+  +---------------------+------------------+------------------+------------------+
+  | Debug test program? | YES (IDE 1)      | NO               | YES              |
+  | Debug server?       | YES (IDE 2)      | YES              | NO               |
+  | Test runs from      | Delphi IDE 1     | Command line     | Delphi IDE       |
+  | Server runs from    | Launched by test | Launched by test | Launched by test |
+  | Break test code?    | Yes              | No               | Yes              |
+  | Break server code?  | Yes              | Yes              | No               |
+  | Setup complexity    | Moderate         | Simple           | Simple           |
+  | Best for            | Full debugging   | Server issues    | Test issues      |
+  +---------------------+------------------+------------------+------------------+
+
+
+  THE --wait FLAG EXPLAINED
+  =========================
+
+  Without --wait: Server starts, initializes, then waits for messages.
+                  You can only debug from Server.Run onward.
+                  (Constructor and initialization already executed)
+
+  With --wait:    Server displays PID and waits BEFORE any code executes.
+				  You can set breakpoints ANYWHERE including:
+                  - The very first line of the program
+                  - TMCPServer.Create constructor
+                  - InitializeLSP function
+                  - Any initialization code
+
+  To use --wait:
+    TestAllTools.exe --wait
+
+  The server will receive the --wait flag and pause before initialization,
+  giving you time to attach the debugger and set breakpoints.
+
+
+  HOW IT WORKS
+  ============
+
+  The test program automatically:
+  1. Creates pipes for communication
+  2. Launches DelphiLSPMCPServer.exe as a separate process
+  3. Displays the Server PID
+  4. WAITS for you to attach a debugger
+  5. Only continues when you press Enter
+
+  This design gives you unlimited time to:
+  - Open the server project in a second IDE
+  - Attach to the correct process
+  - Set breakpoints
+  - Press F9 to continue the server
+  - Then press Enter to start the tests
+
+
+  TROUBLESHOOTING
+  ===============
+
+  "Can't find the PID in Attach to Process list"
+  - Make sure the test program has started (shows the PID)
+  - Refresh the process list in the Attach dialog
+  - Look for DelphiLSPMCPServer.exe, NOT TestAllTools.exe
+
+  "Breakpoints don't hit in server"
+  - Ensure debug info is enabled in server project options
+  - Verify you attached to the correct process (check PID)
+  - Make sure you pressed F9 after attaching to continue execution
+  - Check that the test console shows "Press Enter after debugger is attached..."
+
+  "Breakpoints don't hit in server initialization code"
+  - Make sure you added --wait to the test program's command line
+  - The server must receive the --wait flag to pause before initialization
+  - Without --wait, the server runs through initialization before you can attach
+  - Use: TestAllTools.exe --wait
+
+  "Breakpoints don't hit in test program"
+  - Are you using Two-IDEs method? Test runs from IDE 1
+  - Are you using Server-Only method? Test runs from command line (no debugger)
+  - Switch to Two-IDEs method to debug test program
+
+  "Server console window doesn't appear"
+  - The server runs with CREATE_NO_WINDOW by default
+  - To see server console output, modify StartServer and remove CREATE_NO_WINDOW
+  - Or use --wait and attach debugger to see server state
+
+  "Test program launches server but I want to debug from the very beginning"
+  - Use TestAllTools.exe --wait
+  - This passes --wait to the server, making it pause before any code executes
+
+  "ERROR: Could not start server"
+  - Make sure DelphiLSPMCPServer.exe exists in the same directory
+  - Check that the server executable is not blocked by antivirus
+
+  "ERROR: Source file not found"
+  - Place SourceForAnalysis.dpr in the same directory as TestAllTools.exe
+
+
+  TEST COVERAGE
+  =============
+
+  The test suite executes 20 tests:
+
+  Tests 1-2:    MCP Protocol (Initialize, Tools List)
+  Tests 3-5:    Goto Definition (various symbols)
+  Tests 6-7:    Find References
+  Tests 8-9:    Hover Information
+  Tests 10-11:  Code Completion
+  Tests 12-14:  Workspace Symbols
+  Test 15:      Error Handling (invalid tool)
+  Tests 16-17:  Resources & Prompts (minimal)
+  Test 18:      Unknown Method (error response)
+  Test 19:      Additional Definition test
+  Test 20:      Shutdown
+
+
+  EXIT CODES
+  ==========
+
+  0 - All tests passed
+  1 - One or more tests failed or fatal error occurred
+
+
+  EXAMPLES
+  ========
+
+  Quick validation (no debugging):
+	TestAllTools.exe
+
+  Full debugging with two IDEs (debug server startup):
+	TestAllTools.exe --wait
+	[Then follow the Two-IDEs instructions above]
+
+  Full debugging with two IDEs (debug message handling only):
+	TestAllTools.exe
+	[Then follow the Two-IDEs instructions above]
+
+  Server-only debugging:
+	TestAllTools.exe
+	[Attach Delphi to the PID shown, but test not debuggable]
+
+  Test-only debugging:
+	(Open TestAllTools.dpr in Delphi, press F9)
+	[Server not debuggable, only test is under debugger]
+}
 
 uses
   System.SysUtils,
@@ -10,18 +325,17 @@ uses
   Winapi.Windows;
 
 const
-  READ_TIMEOUT_MS       = 15000;  // 15 seconds for LSP tool calls (retries take time)
+  READ_TIMEOUT_MS       = 15000;
   MAX_MESSAGE_SIZE      = 32 * 1024 * 1024;
   MAX_HEADER_LINE_LENGTH = 8192;
 
-  // SourceForAnalysis.dpr lives in the same directory
   SOURCE_FILE = 'SourceForAnalysis.dpr';
 
 type
   TTestResult = record
     Name: string;
     Passed: Boolean;
-    Details: string;
+	Details: string;
     ResponseJson: string;
   end;
 
@@ -33,6 +347,7 @@ var
   SourceUri: string;
   AllResults: TTestResultArray;
   ResultCount: Integer;
+  UseServerWait: Boolean = True;  // New flag for --wait
 
 procedure AddResult(const R: TTestResult);
 begin
@@ -115,7 +430,6 @@ begin
   Line := '';
   StartTime := GetTickCount64;
 
-  // Read headers or raw JSON
   while True do
   begin
     if (GetTickCount64 - StartTime) > READ_TIMEOUT_MS then
@@ -158,7 +472,6 @@ begin
             Exit(False);
           end;
         end
-        // Detect raw JSON (server sends raw JSON + CRLF, no Content-Length)
         else if (Line <> '') and (Line[1] = '{') then
         begin
           Raw := UTF8ToString(UTF8String(Line));
@@ -182,7 +495,6 @@ begin
     end;
   end;
 
-  // Read body using Content-Length
   SetLength(Buffer, ContentLength);
   TotalRead := 0;
   StartTime := GetTickCount64;
@@ -226,11 +538,14 @@ var
   CmdBuf: array[0..2047] of Char;
   StdinRead, StdoutWrite: THandle;
   StdErr: THandle;
+  CreationFlags: DWORD;
 begin
   Result := False;
   ProcessHandle := 0;
   StdinWrite := 0;
   StdoutRead := 0;
+
+  WriteLn('Launching new server process...');
 
   ZeroMemory(@SA, SizeOf(SA));
   SA.nLength := SizeOf(SA);
@@ -248,7 +563,7 @@ begin
     WriteLn('ERROR: CreatePipe stdout failed: ', GetLastError);
     SafeCloseHandle(StdinRead);
     SafeCloseHandle(StdinWrite);
-    Exit(False);
+	Exit(False);
   end;
   SetHandleInformation(StdoutRead, HANDLE_FLAG_INHERIT, 0);
 
@@ -263,13 +578,22 @@ begin
     StdErr := 0;
   SI.hStdError := StdErr;
 
-  Cmd := Format('"DelphiLSPMCPServer.exe" --log-level debug --workspace "%s"', [ExpandFileName('.')]);
+  // Build command line with or without --wait flag
+  if UseServerWait then
+    Cmd := Format('"DelphiLSPMCPServer.exe" --debug --wait --workspace "%s"', [ExpandFileName('.')])
+  else
+    Cmd := Format('"DelphiLSPMCPServer.exe" --debug --workspace "%s"', [ExpandFileName('.')]);
+
+  WriteLn('Command: ', Cmd);
   StrPCopy(CmdBuf, Cmd);
 
   ZeroMemory(@PI, SizeOf(PI));
 
+  // Use CREATE_NO_WINDOW to hide server console (optional, can be removed for debugging)
+  CreationFlags := CREATE_NO_WINDOW;
+
   if not CreateProcess(nil, CmdBuf, nil, nil, True,
-    CREATE_NO_WINDOW, nil, nil, SI, PI) then
+    CreationFlags, nil, nil, SI, PI) then
   begin
     WriteLn('ERROR: CreateProcess failed: ', GetLastError);
     SafeCloseHandle(StdinRead);
@@ -284,18 +608,41 @@ begin
   SafeCloseHandle(PI.hThread);
   ProcessHandle := PI.hProcess;
 
+  WriteLn('Server started successfully!');
+  WriteLn('PID: ', GetProcessId(ProcessHandle));
+  WriteLn('');
+  WriteLn('========================================');
+  WriteLn('DEBUGGING INSTRUCTIONS:');
+  WriteLn('========================================');
+  WriteLn('1. In Delphi IDE: Run -> Attach to Process');
+  WriteLn('2. Find process with PID: ', GetProcessId(ProcessHandle));
+  WriteLn('3. Click Attach');
+  WriteLn('4. Set breakpoints in server code');
+  if UseServerWait then
+    WriteLn('5. Server is waiting with --wait flag. Press F9 to continue, then Press Enter here')
+  else
+    WriteLn('5. Press F9 to continue server');
+  WriteLn('6. Press Enter here to start tests');
+  WriteLn('========================================');
+  WriteLn('');
+  WriteLn('Press Enter after debugger is attached...');
+  ReadLn;
+
   Result := True;
 end;
 
 procedure Cleanup;
 begin
+  WriteLn('Cleaning up...');
   if ProcessHandle <> 0 then
   begin
+    WriteLn('Terminating server process (PID: ', GetProcessId(ProcessHandle), ')');
     TerminateProcess(ProcessHandle, 0);
     SafeCloseHandle(ProcessHandle);
   end;
   SafeCloseHandle(StdinWrite);
   SafeCloseHandle(StdoutRead);
+  WriteLn('Cleanup complete');
 end;
 
 function RunTest(const Name, Request: string; ExpectError: Boolean = False): TTestResult;
@@ -310,6 +657,8 @@ begin
   Result.ResponseJson := '';
 
   PrintHeader('TEST: ' + Name);
+  WriteLn('Request: ', Copy(Request, 1, 200));
+
   try
     SendMessage(Request);
     if not ReadMessage(Raw) then
@@ -346,12 +695,11 @@ begin
       Json.Free;
     end;
   except
-    on E: Exception do
+	on E: Exception do
       Result.Details := 'Exception: ' + E.Message;
   end;
 end;
 
-// Check the content text inside a tool call result
 function GetToolResultText(const ResponseJson: string): string;
 var
   Json, ResultObj: TJSONObject;
@@ -382,10 +730,8 @@ var
   C: Char;
 begin
   FullPath := ExpandFileName(SOURCE_FILE);
-  // Convert backslashes to forward slashes
   FullPath := StringReplace(FullPath, '\', '/', [rfReplaceAll]);
 
-  // Percent-encode spaces and special chars in path
   Result := '';
   for I := 1 to Length(FullPath) do
   begin
@@ -407,6 +753,40 @@ begin
   );
 end;
 
+procedure ParseCommandLine;
+var
+  I: Integer;
+  Param: string;
+begin
+  for I := 1 to ParamCount do
+  begin
+    Param := ParamStr(I);
+	if (Param = '--wait') then
+    begin
+      UseServerWait := True;
+      WriteLn('Mode: Server will start with --wait flag (for debugging startup)');
+    end
+    else if (Param = '--help') or (Param = '-h') then
+    begin
+      WriteLn('TestAllTools - Test Delphi LSP MCP Server');
+      WriteLn('');
+      WriteLn('Usage:');
+      WriteLn('  TestAllTools.exe              - Launch new server and run tests (default)');
+      WriteLn('  TestAllTools.exe --wait       - Launch server with --wait flag (debug server startup)');
+      WriteLn('  TestAllTools.exe --help       - Show this help');
+      WriteLn('');
+      WriteLn('For debugging:');
+      WriteLn('  1. Run TestAllTools.exe --wait');
+      WriteLn('  2. In Delphi: Run -> Attach to Process -> Select the server PID');
+      WriteLn('  3. Set breakpoints in server code (including initialization)');
+      WriteLn('  4. Press F9 to continue');
+      WriteLn('  5. Press Enter in test console to start tests');
+      WriteLn('  6. Breakpoints will hit');
+      Halt(0);
+    end;
+  end;
+end;
+
 procedure RunAllTests;
 var
   R: TTestResult;
@@ -416,9 +796,7 @@ begin
   ResultCount := 0;
   SetLength(AllResults, 32);
 
-  // =========================================================
   // TEST 1: Initialize
-  // =========================================================
   R := RunTest('1. MCP Initialize',
     '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{' +
       '"protocolVersion":"2025-11-25",' +
@@ -434,23 +812,18 @@ begin
     Exit;
   end;
 
-  // Check protocolVersion in response
   Text := R.ResponseJson;
   if Pos('"protocolVersion"', Text) = 0 then
     WriteLn('  WARNING: No protocolVersion in response');
 
-  // Give LSP server time to start and index
   WriteLn;
   WriteLn('Waiting 3 seconds for LSP to start and index...');
   Sleep(3000);
 
-  // Send initialized notification (no response expected)
   SendMessage('{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}');
   Sleep(500);
 
-  // =========================================================
   // TEST 2: Tools List
-  // =========================================================
   R := RunTest('2. Tools List',
     '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}');
   AddResult(R);
@@ -458,7 +831,6 @@ begin
 
   if R.Passed then
   begin
-    // Check that we get 5 tools
     if Pos('"delphi_goto_definition"', R.ResponseJson) > 0 then
       WriteLn('  OK: delphi_goto_definition found')
     else
@@ -485,11 +857,7 @@ begin
       WriteLn('  WARNING: delphi_workspace_symbols NOT found');
   end;
 
-  // =========================================================
-  // TEST 3: Goto Definition - TFoo.Bar method call
-  // SourceForAnalysis.dpr line 27 (0-based 26): "    F.Bar;"
-  // "Bar" starts at char 6
-  // =========================================================
+  // LSP Tool Tests
   WriteLn;
   WriteLn('--- LSP Tool Tests against ', SOURCE_FILE, ' ---');
   WriteLn('Source URI: ', SourceUri);
@@ -502,11 +870,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 4: Goto Definition - TFoo class on its declaration line
-  // SourceForAnalysis.dpr line 13 (0-based 12): "  TFoo = class"
-  // "TFoo" starts at char 2
-  // =========================================================
   ArgsJson := Format('{"uri":"%s","line":12,"character":3}', [SourceUri]);
   R := RunTest('4. Goto Definition (TFoo declaration, line 13)',
     ToolCallRequest(11, 'delphi_goto_definition', ArgsJson));
@@ -515,11 +878,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 5: Goto Definition - WriteLn call
-  // SourceForAnalysis.dpr line 19 (0-based 18): "  WriteLn('Hello World');"
-  // "WriteLn" starts at char 2
-  // =========================================================
   ArgsJson := Format('{"uri":"%s","line":18,"character":4}', [SourceUri]);
   R := RunTest('5. Goto Definition (WriteLn, line 19)',
     ToolCallRequest(12, 'delphi_goto_definition', ArgsJson));
@@ -528,10 +886,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 6: Find References - TFoo
-  // SourceForAnalysis.dpr line 13 (0-based 12): "  TFoo = class"
-  // =========================================================
   ArgsJson := Format('{"uri":"%s","line":12,"character":3,"includeDeclaration":true}', [SourceUri]);
   R := RunTest('6. Find References (TFoo, line 13)',
     ToolCallRequest(13, 'delphi_find_references', ArgsJson));
@@ -540,11 +894,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 7: Find References - Bar
-  // SourceForAnalysis.dpr line 14 (0-based 13): "    procedure Bar;"
-  // "Bar" starts at char 14
-  // =========================================================
   ArgsJson := Format('{"uri":"%s","line":13,"character":15}', [SourceUri]);
   R := RunTest('7. Find References (Bar, line 14)',
     ToolCallRequest(14, 'delphi_find_references', ArgsJson));
@@ -553,10 +902,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 8: Hover - TFoo class
-  // SourceForAnalysis.dpr line 13 (0-based 12)
-  // =========================================================
   ArgsJson := Format('{"uri":"%s","line":12,"character":3}', [SourceUri]);
   R := RunTest('8. Hover (TFoo, line 13)',
     ToolCallRequest(15, 'delphi_hover', ArgsJson));
@@ -565,11 +910,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 9: Hover - Bar procedure
-  // SourceForAnalysis.dpr line 17 (0-based 16): "procedure TFoo.Bar;"
-  // "Bar" at char 15
-  // =========================================================
   ArgsJson := Format('{"uri":"%s","line":16,"character":15}', [SourceUri]);
   R := RunTest('9. Hover (TFoo.Bar, line 17)',
     ToolCallRequest(16, 'delphi_hover', ArgsJson));
@@ -578,11 +918,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 10: Completion - after "F." on line 27
-  // Line 27 (0-based 26): "    F.Bar;"
-  // Position after "F." = char 6
-  // =========================================================
   ArgsJson := Format('{"uri":"%s","line":26,"character":6}', [SourceUri]);
   R := RunTest('10. Completion (after F., line 27)',
     ToolCallRequest(17, 'delphi_completion', ArgsJson));
@@ -591,11 +926,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Copy(Text, 1, 300));
 
-  // =========================================================
-  // TEST 11: Completion - after "TFoo." to see methods
-  // Line 25 (0-based 24): "  F := TFoo.Create;"
-  // Position after "TFoo." = char 14
-  // =========================================================
   ArgsJson := Format('{"uri":"%s","line":24,"character":14}', [SourceUri]);
   R := RunTest('11. Completion (after TFoo., line 25)',
     ToolCallRequest(18, 'delphi_completion', ArgsJson));
@@ -604,9 +934,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Copy(Text, 1, 300));
 
-  // =========================================================
-  // TEST 12: Workspace Symbols - TFoo
-  // =========================================================
   R := RunTest('12. Workspace Symbols (query=TFoo)',
     ToolCallRequest(19, 'delphi_workspace_symbols', '{"query":"TFoo"}'));
   AddResult(R);
@@ -614,9 +941,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 13: Workspace Symbols - Bar
-  // =========================================================
   R := RunTest('13. Workspace Symbols (query=Bar)',
     ToolCallRequest(20, 'delphi_workspace_symbols', '{"query":"Bar"}'));
   AddResult(R);
@@ -624,9 +948,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 14: Workspace Symbols - empty query (should return many)
-  // =========================================================
   R := RunTest('14. Workspace Symbols (query="" empty)',
     ToolCallRequest(21, 'delphi_workspace_symbols', '{"query":""}'));
   AddResult(R);
@@ -634,49 +955,33 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Copy(Text, 1, 200));
 
-  // =========================================================
-  // TEST 15: Invalid tool name
-  // =========================================================
   R := RunTest('15. Invalid Tool Name',
     ToolCallRequest(22, 'nonexistent_tool', '{}'));
   AddResult(R);
   PrintResult(R);
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
-  // This should return isError=true in the result (not a JSON-RPC error)
+
   if Pos('"isError":true', R.ResponseJson) > 0 then
     WriteLn('  OK: isError=true in result (correct per MCP spec)')
   else if R.Passed then
     WriteLn('  WARNING: No isError=true found, invalid tool should set isError');
 
-  // =========================================================
-  // TEST 16: Resources List
-  // =========================================================
   R := RunTest('16. Resources List',
     '{"jsonrpc":"2.0","id":30,"method":"resources/list","params":{}}');
   AddResult(R);
   PrintResult(R);
 
-  // =========================================================
-  // TEST 17: Prompts List
-  // =========================================================
   R := RunTest('17. Prompts List',
     '{"jsonrpc":"2.0","id":31,"method":"prompts/list","params":{}}');
   AddResult(R);
   PrintResult(R);
 
-  // =========================================================
-  // TEST 18: Unknown MCP method (should return MethodNotFound error)
-  // =========================================================
   R := RunTest('18. Unknown Method (expect error)',
     '{"jsonrpc":"2.0","id":32,"method":"foo/bar","params":{}}', True);
   AddResult(R);
   PrintResult(R);
 
-  // =========================================================
-  // TEST 19: tools/call before re-init (already initialized, should work)
-  // Goto definition on SysUtils (line 10, char 2)
-  // =========================================================
   ArgsJson := Format('{"uri":"%s","line":9,"character":4}', [SourceUri]);
   R := RunTest('19. Goto Definition (SysUtils, line 10)',
     ToolCallRequest(33, 'delphi_goto_definition', ArgsJson));
@@ -685,9 +990,6 @@ begin
   Text := GetToolResultText(R.ResponseJson);
   WriteLn('  Tool result text: ', Text);
 
-  // =========================================================
-  // TEST 20: Shutdown
-  // =========================================================
   R := RunTest('20. Shutdown',
     '{"jsonrpc":"2.0","id":99,"method":"shutdown","params":{}}');
   AddResult(R);
@@ -719,12 +1021,11 @@ begin
   else
     WriteLn('SOME TESTS FAILED!');
 
-  // Detailed analysis of failures
   if Failed > 0 then
   begin
     WriteLn;
     WriteLn('--- FAILURE DETAILS ---');
-    for I := 0 to ResultCount - 1 do
+	for I := 0 to ResultCount - 1 do
     begin
       if not AllResults[I].Passed then
       begin
@@ -747,13 +1048,15 @@ begin
   WriteLn('==============================================');
   WriteLn;
 
+  // Parse command line
+  ParseCommandLine;
+
   // Build the file URI for SourceForAnalysis.dpr
   SourceUri := BuildSourceUri;
   WriteLn('Source file: ', ExpandFileName(SOURCE_FILE));
   WriteLn('Source URI:  ', SourceUri);
   WriteLn;
 
-  // Check source file exists
   if not FileExists(SOURCE_FILE) then
   begin
     WriteLn('ERROR: Source file not found: ', SOURCE_FILE);
@@ -764,7 +1067,7 @@ begin
     Exit;
   end;
 
-  // Start the MCP server
+  // Start the MCP server (this will show PID and wait for debugger)
   WriteLn('Starting MCP server...');
   if not StartServer then
   begin
@@ -775,10 +1078,6 @@ begin
     ReadLn;
     Exit;
   end;
-  WriteLn('Server started, PID: ', GetProcessId(ProcessHandle));
-
-  // Wait for server to be ready
-  Sleep(1000);
 
   // Run all tests
   RunAllTests;

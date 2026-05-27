@@ -1,10 +1,10 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{C4F7EBAB-DD21-4564-BAAC-0E12956A7162}</ProjectGuid>
-        <MainSource>DelphiLSPMCPServer.dpr</MainSource>
+        <ProjectGuid>{D4FB28F0-3668-4491-9861-B80955EF14F9}</ProjectGuid>
+        <MainSource>TestAllTools.dpr</MainSource>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
-        <ProjectName Condition="'$(ProjectName)'==''">DelphiLSPMCPServer</ProjectName>
+        <ProjectName Condition="'$(ProjectName)'==''">TestAllTools</ProjectName>
         <TargetedPlatforms>2</TargetedPlatforms>
         <AppType>Console</AppType>
         <FrameworkType>None</FrameworkType>
@@ -49,12 +49,6 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win64)'!=''">
-        <Cfg_2_Win64>true</Cfg_2_Win64>
-        <CfgParent>Cfg_2</CfgParent>
-        <Cfg_2>true</Cfg_2>
-        <Base>true</Base>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
         <DCC_E>false</DCC_E>
         <DCC_F>false</DCC_F>
@@ -62,7 +56,7 @@
         <DCC_N>false</DCC_N>
         <DCC_S>false</DCC_S>
         <DCC_ImageBase>00400000</DCC_ImageBase>
-        <SanitizedProjectName>DelphiLSPMCPServer</SanitizedProjectName>
+        <SanitizedProjectName>TestAllTools</SanitizedProjectName>
         <VerInfo_Locale>8192</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=;CFBundleName=</VerInfo_Keys>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
@@ -131,23 +125,10 @@
         <DCC_RangeChecking>true</DCC_RangeChecking>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
-        <Debugger_RunParams>--debug --workspace &quot;.&quot;</Debugger_RunParams>
-    </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="Common.JsonRpc.pas"/>
-        <DCCReference Include="Common.Logging.pas"/>
-        <DCCReference Include="MCP.Protocol.Types.pas"/>
-        <DCCReference Include="LSP.Protocol.Types.pas"/>
-        <DCCReference Include="MCP.Transport.Stdio.pas"/>
-        <DCCReference Include="LSP.Transport.Process.pas"/>
-        <DCCReference Include="LSP.Client.pas"/>
-        <DCCReference Include="MCP.Tools.LSP.pas"/>
-        <DCCReference Include="Common.Utils.pas"/>
-        <DCCReference Include="MCP.Server.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -166,7 +147,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">DelphiLSPMCPServer.dpr</Source>
+                    <Source Name="MainSource">TestAllTools.dpr</Source>
                 </Source>
             </Delphi.Personality>
             <Platforms>
