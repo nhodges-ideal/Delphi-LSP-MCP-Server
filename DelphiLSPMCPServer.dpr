@@ -5,24 +5,28 @@
 {$R *.res}
 
 {
-  Example Usage Documentation for Delphi LSP MCP Server
-  ====================================================
+  ============================================================================
+  Delphi LSP MCP Server - Model Context Protocol Server for Delphi/Pascal LSP
+  ============================================================================
 
   This server implements the Model Context Protocol (MCP) for Delphi/Pascal
   Language Server Protocol (LSP) integration. It allows AI assistants to
   query Delphi code for definitions, references, hover info, completions,
   and workspace symbols.
 
+  ============================================================================
   BASIC USAGE
-  -----------
+  ============================================================================
   DelphiLSPMCPServer.exe --workspace "<path-to-your-project>"
 
+  ============================================================================
   FULL DEBUG MODE (Development/Testing)
-  -------------------------------------
+  ============================================================================
   DelphiLSPMCPServer.exe --debug --log-level debug --workspace "."
 
+  ============================================================================
   COMMAND LINE OPTIONS
-  --------------------
+  ============================================================================
   --lsp-path <path>   Path to LSP server executable
                       Default (32-bit): G:\Tools\PascalLanguageServer\git version 26 january 2026\pasls.exe
                       Default (64-bit): G:\Tools\PascalLanguageServer\git version 26 january 2026\pasls_x64.exe
@@ -34,19 +38,17 @@
                       Default: info
 
   --debug             Enable debug mode for all components
-					  (Sets log-level to debug and enables component-level debugging)
-
+                      (Sets log-level to debug and enables component-level debugging)
 
   --wait              Wait for debugger attachment BEFORE any initialization
-					  Use this to debug server startup code (program block,
-					  constructor, initialization, etc.)
-
+                      Use this to debug server startup code (program block,
+                      constructor, initialization, etc.)
 
   --help              Show this help message
 
-
+  ============================================================================
   EXAMPLES
-  --------
+  ============================================================================
 
   1. Basic server with default workspace (current directory):
      DelphiLSPMCPServer.exe
@@ -64,17 +66,11 @@
      DelphiLSPMCPServer.exe --debug --lsp-path "C:\pasls.exe" --workspace "."
 
   6. Production mode (minimal logging):
-	 DelphiLSPMCPServer.exe --log-level error --workspace "C:\MyProject"
+     DelphiLSPMCPServer.exe --log-level error --workspace "C:\MyProject"
 
-  Example:
-  DelphiLSPMCPServer.exe --debug --workspace "." --wait
-
-  This will display the PID and wait for you to attach the debugger
-  BEFORE any server code executes, allowing you to debug the entire
-  startup sequence.
-
+  ============================================================================
   DEBUGGING WITH TWO DELPHI IDEs (RECOMMENDED METHOD)
-  ===================================================
+  ============================================================================
 
   This is the MOST POWERFUL way to debug the server. You can debug BOTH
   the test program AND the server simultaneously, each in its own IDE
@@ -87,29 +83,33 @@
   - Server needs debugging? Attach IDE 2 to the server process
   - Two IDEs = two debuggers = both processes debuggable simultaneously
 
-
+  ============================================================================
   STEP-BY-STEP INSTRUCTIONS
-  -------------------------
+  ============================================================================
 
   ┌─────────────────────────────────────────────────────────────────────────┐
-  │ IDE 1: TEST PROGRAM                                                    │
+  │ IDE 1: TEST PROGRAM (TestAllTools.dpr)                                 │
   ├─────────────────────────────────────────────────────────────────────────┤
   │                                                                         │
   │ 1. Open TestAllTools.dpr in Delphi IDE (Instance #1)                    │
   │                                                                         │
   │ 2. Set breakpoints in test code if needed (optional)                    │
   │                                                                         │
-  │ 3. Press F9 to run the test program                                     │
+  │ 3. Go to Run -> Parameters                                              │
+  │    Enter: --wait                                                        │
   │                                                                         │
-  │ 4. The test program will:                                               │
-  │    - Launch DelphiLSPMCPServer.exe as a separate process                │
+  │ 4. Press F9 to run the test program                                     │
+  │                                                                         │
+  │ 5. The test program will:                                               │
+  │    - Launch DelphiLSPMCPServer.exe with --wait flag                     │
   │    - Display: "Server started successfully! PID: 12345"                 │
-  │    - WAIT with: "Press Enter after debugger is attached..."             │
+  │    - Display debugging instructions                                     │
+  │    - WAIT for server's ready event                                      │
   │                                                                         │
   └─────────────────────────────────────────────────────────────────────────┘
 
   ┌─────────────────────────────────────────────────────────────────────────┐
-  │ IDE 2: SERVER                                                           │
+  │ IDE 2: MCP LSP SERVER (DelphiLSPMCPServer.dpr)                         │
   ├─────────────────────────────────────────────────────────────────────────┤
   │                                                                         │
   │ 1. Open DelphiLSPMCPServer.dpr in a SEPARATE Delphi IDE (Instance #2)   │
@@ -131,7 +131,10 @@
   │                                                                         │
   │ 6. Click "Attach"                                                       │
   │                                                                         │
-  │ 7. Press F9 to let the server continue running                          │
+  │ 7. Debugger will break immediately (thread instruction)                 │
+  │    This is NORMAL - process was waiting                                 │
+  │                                                                         │
+  │ 8. Press F9 to let the server continue                                  │
   │                                                                         │
   └─────────────────────────────────────────────────────────────────────────┘
 
@@ -139,17 +142,32 @@
   │ BACK TO IDE 1: TEST PROGRAM                                             │
   ├─────────────────────────────────────────────────────────────────────────┤
   │                                                                         │
-  │ 1. Press Enter in the test console (where it was waiting)               │
+  │ 1. The test program automatically detects server's ready event          │
   │                                                                         │
-  │ 2. The tests will begin to run                                          │
+  │ 2. Tests begin automatically - NO manual Enter press needed!            │
   │                                                                         │
   │ 3. When the test calls the server, breakpoints in IDE 2 will hit!       │
   │                                                                         │
   └─────────────────────────────────────────────────────────────────────────┘
 
+  ============================================================================
+  SYNCHRONIZATION MECHANISM
+  ============================================================================
 
+  The server uses a named Windows Event for synchronization:
+  - Event Name: 'Global\DelphiLSPMCPServer_Ready'
+  - Server creates event at startup (non-signaled)
+  - Server signals event when fully initialized and ready
+  - Test program waits for this event before sending messages
+
+  This ensures:
+  - No race conditions
+  - No manual console input required
+  - Perfect synchronization between processes
+
+  ============================================================================
   THE --wait FLAG EXPLAINED
-  =========================
+  ============================================================================
 
   Without --wait: Server starts, initializes, then waits for messages.
                   You can only debug from Server.Run onward.
@@ -162,12 +180,16 @@
                   - InitializeLSP function
                   - Any initialization code
 
+                  After attaching debugger and pressing F9, the server
+                  continues and will signal the ready event when fully
+                  initialized, allowing the test program to proceed.
+
   Example with --wait:
     DelphiLSPMCPServer.exe --debug --workspace "." --wait
 
-
+  ============================================================================
   ALTERNATIVE: Single IDE (Server Only Debugging)
-  ================================================
+  ============================================================================
 
   If you only need to debug the server (not the test program):
 
@@ -182,11 +204,11 @@
   9. Breakpoints will hit when tests connect
 
   Note: In this method, the test program runs freely without a debugger.
-		Only the server is under debugger control.
+        Only the server is under debugger control.
 
-
+  ============================================================================
   BITNESS CONSIDERATIONS
-  ----------------------
+  ============================================================================
 
   The server auto-detects its bitness and attempts to use matching LSP:
   - 32-bit server → uses DEFAULT_LSP_PATH_32 (32-bit pasls.exe)
@@ -198,9 +220,9 @@
   - LSP server bitness matches the compiled server bitness
   - FPC bitness matches the LSP server (32-bit FPC for 32-bit LSP, etc.)
 
-
+  ============================================================================
   ENVIRONMENT VARIABLES (for pasls)
-  ---------------------------------
+  ============================================================================
 
   The server automatically sets these environment variables:
   - PP         : Path to fpc.exe (auto-detected based on bitness)
@@ -208,19 +230,39 @@
   - FPCTARGET  : win32
   - FPCTARGETCPU: i386 or x86_64 (auto-detected)
 
+  ============================================================================
+  TROUBLESHOOTING
+  ============================================================================
 
-  If the server exits immediately:
+  "Server exits immediately"
   - Check that LSP executable exists at the specified path
   - Verify workspace path exists and is accessible
   - Run with --debug to see detailed error messages
 
-  If LSP operations fail or timeout:
+  "LSP operations fail or timeout"
   - Ensure workspace contains Delphi source files (.pas, .dpr, .lpr)
   - Check that FPC environment variables are correctly set
   - Verify LSP server is compatible with your Delphi/FPC version
 
-  LOG OUTPUT
-  ----------
+  "Can't find the PID in Attach to Process list"
+  - Make sure the test program has started (IDE 1 should show the PID)
+  - Refresh the process list in the Attach dialog
+  - Look for DelphiLSPMCPServer.exe, NOT TestAllTools.exe
+
+  "Breakpoints don't hit in server"
+  - Ensure debug info is enabled in server project options
+  - Verify you attached to the correct process (check PID)
+  - Make sure you pressed F9 after attaching to continue execution
+  - Check that the test is actually sending requests (look for console output)
+
+  "Test program hangs waiting for server"
+  - Check that server created the ready event
+  - Look for "Ready event created successfully" in server console
+  - Verify event name matches: Global\DelphiLSPMCPServer_Ready
+
+  ============================================================================
+  LOG OUTPUT FORMAT
+  ============================================================================
 
   Logs are written to stderr with this format:
   [timestamp][thread_id][LEVEL] message
@@ -231,8 +273,9 @@
 
   The server uses UTF-8 encoding WITHOUT BOM for proper console output.
 
+  ============================================================================
   PROTOCOL
-  --------
+  ============================================================================
 
   The server communicates via JSON-RPC 2.0 over stdin/stdout.
 
@@ -253,22 +296,23 @@
 }
 
 {
+  ============================================================================
   MCP LSP Server - Breakpoint Opportunities for Debugging
-  =======================================================
+  ============================================================================
 
   PRIMARY BREAKPOINTS (Most Important)
   ------------------------------------
 
   1. Entry Point - HandleMessage (MCP.Server.pas)
      -------------------------------------------------
-	 procedure TMCPServer.HandleMessage(const AMessage: string);
+     procedure TMCPServer.HandleMessage(const AMessage: string);
      begin
-	   // BREAKPOINT HERE - Catches ALL incoming JSON-RPC messages
-	   // Use this to see what messages arrive from the client
+       // BREAKPOINT HERE - Catches ALL incoming JSON-RPC messages
+       // Use this to see what messages arrive from the client
        if AMessage = '' then
-	   begin
-		 HandleStdinClosed;
-		 Exit;
+       begin
+         HandleStdinClosed;
+         Exit;
        end;
        ...
      end;
@@ -302,7 +346,7 @@
 
   4. Tool Execution - ExecuteGotoDefinition (MCP.Tools.LSP.pas)
      ----------------------------------------------------------
-	 function TMCPLSPTools.ExecuteGotoDefinition(AArguments: TJSONObject): TMCPToolCallResult;
+     function TMCPLSPTools.ExecuteGotoDefinition(AArguments: TJSONObject): TMCPToolCallResult;
      begin
        // BREAKPOINT HERE - Actual tool implementation for goto definition
        // Check Uri, Line, Character parameters
@@ -332,9 +376,9 @@
   -------------------------------------------
 
   6. Initialize Handler - HandleInitialize (MCP.Server.pas)
-	 ------------------------------------------------------
-	 procedure TMCPServer.HandleInitialize(ARequest: TJsonRpcRequest);
-	 begin
+     ------------------------------------------------------
+     procedure TMCPServer.HandleInitialize(ARequest: TJsonRpcRequest);
+     begin
        // BREAKPOINT HERE - Server handshake
        // Use this to debug startup and capability negotiation
        FLogContext.Enter('HandleInitialize');
@@ -356,17 +400,17 @@
      end;
      Purpose: Debug LSP definition requests to the language server
 
-
-  QUICK DEBUGGING SETUP FOR TEST 3 HANG ISSUE
-  -------------------------------------------
+  ============================================================================
+  QUICK DEBUGGING SETUP FOR TEST HANG ISSUES
+  ============================================================================
 
   Set breakpoints at locations 1, 2, 3, 4, 5, and 7 above.
 
-  Expected hit order when Test 3 runs:
+  Expected hit order when tests run:
   -------------------------------------------------
   Breakpoint 1: HandleMessage - receives JSON-RPC message
   Breakpoint 2: HandleRequest - identifies method = "tools/call"
-  Breakpoint 3: HandleToolsCall - extracts tool name = "delphi_goto_definition"
+  Breakpoint 3: HandleToolsCall - extracts tool name
   Breakpoint 4: ExecuteGotoDefinition - executes the tool
   Breakpoint 7: GetDefinition - calls LSP server
   Breakpoint 5: SendRequestSync - sends LSP request
@@ -381,9 +425,9 @@
   - If breakpoint 7 hits but not 5: LSP client communication issue
   - If breakpoint 5 hits but no response: LSP server not responding or timeout
 
-
+  ============================================================================
   HOW TO SET BREAKPOINTS IN DELPHI
-  --------------------------------
+  ============================================================================
   1. Open the unit file in Delphi IDE
   2. Navigate to the line indicated above
   3. Click in the left gutter (margin) next to the line number
@@ -394,70 +438,6 @@
   - Right-click the breakpoint red dot
   - Select "Breakpoint Properties"
   - Add condition like: ARequest.Method = 'tools/call'
-
-
-  LOG OUTPUT FORMAT
-  =================
-
-  Logs are written to stderr with this format:
-  [timestamp][thread_id][LEVEL] message
-
-  Example:
-  [ 0.000][1518][INFO] MCP Server created successfully
-  [ 0.000][5BF8][DEBUG] ReadLoop started
-
-  The server uses UTF-8 encoding WITHOUT BOM for proper console output.
-
-
-  PROTOCOL
-  ========
-
-  The server communicates via JSON-RPC 2.0 over stdin/stdout.
-
-  Supported MCP methods:
-  - initialize           : Server handshake and capability negotiation
-  - tools/list           : List available LSP tools
-  - tools/call           : Execute an LSP tool (goto definition, references, etc.)
-  - resources/list       : List available resources (currently empty)
-  - prompts/list         : List available prompts (currently empty)
-  - shutdown             : Graceful shutdown request
-
-  LSP Tools Available:
-  - delphi_goto_definition
-  - delphi_find_references
-  - delphi_hover
-  - delphi_completion
-  - delphi_workspace_symbols
-
-
-  TROUBLESHOOTING
-  ===============
-
-  "Can't find the PID in Attach to Process list"
-  - Make sure the test program has started (IDE 1 should show the PID)
-  - Refresh the process list in the Attach dialog
-  - Look for DelphiLSPMCPServer.exe, NOT TestAllTools.exe
-
-  "Breakpoints don't hit in server"
-  - Ensure debug info is enabled in server project options
-  - Verify you attached to the correct process (check PID)
-  - Make sure you pressed F9 after attaching to continue execution
-  - Check that the test is actually sending requests (look for console output)
-
-  "Server exits immediately"
-  - Check that LSP executable exists at the specified path
-  - Verify workspace path exists and is accessible
-  - Run with --debug to see detailed error messages
-
-  "LSP operations fail or timeout"
-  - Ensure workspace contains Delphi source files (.pas, .dpr, .lpr)
-  - Check that FPC environment variables are correctly set
-  - Verify LSP server is compatible with your Delphi/FPC version
-
-  "Delphi IDEs don't swap focus automatically"
-  - This is normal on some versions
-  - Manually switch between IDE windows when breakpoints hit
-  - The debuggers still work correctly
 }
 
 uses
@@ -495,6 +475,9 @@ const
   DEFAULT_WORKSPACE = '';
   VERSION = '0.1.0';
 
+  // Named event for synchronization with test program
+  SERVER_READY_EVENT_NAME = 'Global\DelphiLSPMCPServer_Ready';
+
 var
   Server: TMCPServer;
   LSPPath: string;
@@ -505,7 +488,8 @@ var
   StartTime: TDateTime;
   LogContext: ILogContext;
   Is64BitProcess: Boolean;
-  WaitForDebugger: Boolean = False;  // New flag
+  WaitForDebugger: Boolean = False;
+  ReadyEvent: THandle;
 
 procedure ShowUsage;
 begin
@@ -518,11 +502,17 @@ begin
   WriteLn(ErrOutput, ' --workspace <path>  Workspace root directory or file:// URI (default: current directory)');
   WriteLn(ErrOutput, ' --log-level <level> Log level: debug, info, warning, error (default: info)');
   WriteLn(ErrOutput, ' --debug             Enable debug mode for all components');
-  WriteLn(ErrOutput, ' --wait              Wait for debugger attachment before initialization');
+  WriteLn(ErrOutput, ' --wait              Wait for debugger attachment BEFORE any code executes');
   WriteLn(ErrOutput, ' --help              Show this help message');
   WriteLn(ErrOutput, '');
   WriteLn(ErrOutput, 'The server communicates via JSON-RPC 2.0 over stdin/stdout.');
   WriteLn(ErrOutput, 'Logs are written to stderr.');
+  WriteLn(ErrOutput, '');
+  WriteLn(ErrOutput, 'For debugging with two Delphi IDEs:');
+  WriteLn(ErrOutput, '  1. Run TestAllTools.exe from IDE 1 (with --wait parameter)');
+  WriteLn(ErrOutput, '  2. In IDE 2, attach to this process (PID shown by test)');
+  WriteLn(ErrOutput, '  3. Set breakpoints and press F9');
+  WriteLn(ErrOutput, '  4. Server automatically signals ready, tests begin');
 end;
 
 function GetDefaultLSPPath: string;
@@ -539,6 +529,25 @@ begin
   end
   else
     Result := DEFAULT_LSP_PATH_32;
+end;
+
+procedure SignalServerReady;
+begin
+  if ReadyEvent <> 0 then
+  begin
+    SetEvent(ReadyEvent);
+    Logger.Info('Server ready event signaled: %s', [SERVER_READY_EVENT_NAME]);
+  end;
+end;
+
+procedure CleanupEvents;
+begin
+  if ReadyEvent <> 0 then
+  begin
+    CloseHandle(ReadyEvent);
+    ReadyEvent := 0;
+    Logger.Debug('Ready event cleaned up');
+  end;
 end;
 
 function ParseCommandLine: Boolean;
@@ -590,7 +599,7 @@ begin
         Exit;
       end;
     end
-	else if Param = '--log-level' then
+    else if Param = '--log-level' then
     begin
       Inc(I);
       if I <= ParamCount then
@@ -603,10 +612,10 @@ begin
       end;
     end
     else if Param = '--debug' then
-	begin
+    begin
       DebugModeFlag := True;
       LogLevel := 'debug';
-      WriteLn(ErrOutput, 'Debug mode enabled');
+	  WriteLn(ErrOutput, 'Debug mode enabled');
     end
     else if Param = '--wait' then
     begin
@@ -656,7 +665,7 @@ begin
   else
   begin
     WriteLn(ErrOutput, 'Warning: Invalid log level "', LogLevel, '", using "info"');
-	Logger.LogLevel := llInfo;
+    Logger.LogLevel := llInfo;
   end;
 
   Logger.Info('Logging configured with level: %s', [LogLevel]);
@@ -790,7 +799,14 @@ begin
   WriteLn(ErrOutput, Format('║ LSP Path:   %-44s ║', [Copy(LSPPath, 1, 44)]));
   WriteLn(ErrOutput, Format('║ Workspace:  %-44s ║', [Copy(WorkspaceRoot, 1, 44)]));
   WriteLn(ErrOutput, Format('║ Log Level:  %-44s ║', [UpperCase(LogLevel)]));
+  WriteLn(ErrOutput, Format('║ PID:        %-44d ║', [GetCurrentProcessId]));
   WriteLn(ErrOutput, '╚══════════════════════════════════════════════════════════════╝');
+  WriteLn(ErrOutput, '');
+  WriteLn(ErrOutput, 'Ready Event: ', SERVER_READY_EVENT_NAME);
+  if WaitForDebugger then
+    WriteLn(ErrOutput, 'Mode: Waiting for debugger attachment (--wait)')
+  else
+    WriteLn(ErrOutput, 'Mode: Normal startup');
   WriteLn(ErrOutput, '');
 end;
 
@@ -816,6 +832,9 @@ begin
 end;
 
 procedure WaitForDebuggerAttachment;
+var
+  Waiting: Boolean;
+  Elapsed: Integer;
 begin
   if not WaitForDebugger then
     Exit;
@@ -826,39 +845,75 @@ begin
   WriteLn(ErrOutput, '╠══════════════════════════════════════════════════════════════╣');
   WriteLn(ErrOutput, Format('║ PID: %-60d ║', [GetCurrentProcessId]));
   WriteLn(ErrOutput, '║                                                              ║');
-  WriteLn(ErrOutput, '║ 1. In Delphi IDE: Run -> Attach to Process                   ║');
+  WriteLn(ErrOutput, '║ Waiting for debugger to attach...                           ║');
+  WriteLn(ErrOutput, '║                                                              ║');
+  WriteLn(ErrOutput, '║ 1. In Delphi IDE #2: Run -> Attach to Process                ║');
   WriteLn(ErrOutput, '║ 2. Find and select this process (PID above)                 ║');
   WriteLn(ErrOutput, '║ 3. Click Attach                                              ║');
-  WriteLn(ErrOutput, '║ 4. Set breakpoints in server code                           ║');
-  WriteLn(ErrOutput, '║ 5. Press F9 to continue                                     ║');
-  WriteLn(ErrOutput, '║ 6. Press Enter here to continue                             ║');
+  WriteLn(ErrOutput, '║                                                              ║');
+  WriteLn(ErrOutput, '║ Server will continue AUTOMATICALLY when debugger attaches   ║');
+  WriteLn(ErrOutput, '║ NO manual Enter press required!                             ║');
   WriteLn(ErrOutput, '╚══════════════════════════════════════════════════════════════╝');
   WriteLn(ErrOutput, '');
-  WriteLn(ErrOutput, 'Press Enter after debugger is attached...');
-  ReadLn;
-end;
 
-begin
-  // EARLY WAIT: Allow debugger attachment before any initialization
-  // This must come BEFORE creating LogContext and any other initialization
-  if ParamCount > 0 then
+  // Wait for debugger to attach (no timeout - wait forever)
+  Waiting := True;
+  Elapsed := 0;
+
+  while Waiting do
   begin
-	// Quick check for --wait flag without full parsing
-	for var I := 1 to ParamCount do
-	begin
-	  if SameText(ParamStr(I), '--wait') then
-	  begin
-		WaitForDebugger := True;
-		Break;
-	  end;
-	end;
+    if IsDebuggerPresent then
+    begin
+      WriteLn(ErrOutput, 'Debugger attached! Continuing in 200ms...');
+      Waiting := False;
+    end
+    else
+    begin
+      // Show heartbeat every 5 seconds
+      if Elapsed >= 5000 then
+      begin
+        WriteLn(ErrOutput, Format('Still waiting for debugger... (%d seconds elapsed)', [Elapsed div 1000]));
+        Elapsed := 0;
+      end;
+      Sleep(100);
+      Elapsed := Elapsed + 100;
+    end;
   end;
 
+  // Small delay to let debugger settle after attach
+  Sleep(200);
+  WriteLn(ErrOutput, 'Server initialization continuing...');
+end;
+
+procedure RunServer;
+var
+  DebugModeFlag: Boolean;
+  ReadyEventHandle: THandle;
+begin
+  // Check for --wait flag before any initialization
+  if ParamCount > 0 then
+  begin
+    for var I := 1 to ParamCount do
+    begin
+	  if SameText(ParamStr(I), '--wait') then
+	  begin
+        WaitForDebugger := True;
+        Break;
+	  end;
+    end;
+  end;
+
+  // First wait point - allows debugging of program entry
   WaitForDebuggerAttachment;
 
-  StartTime := Now;
+  // Create the ready event BEFORE any other initialization
+  ReadyEvent := CreateEvent(nil, True, False, SERVER_READY_EVENT_NAME);
+  if ReadyEvent = 0 then
+    WriteLn(ErrOutput, 'Warning: Failed to create ready event: ', GetLastError)
+  else
+    WriteLn(ErrOutput, 'Ready event created successfully: ', SERVER_READY_EVENT_NAME);
 
-  // Detect process bitness first
+  StartTime := Now;
   Is64BitProcess := SizeOf(Pointer) = 8;
 
   LogContext := Logger.CreateContext('Main');
@@ -871,19 +926,18 @@ begin
     Logger.Debug('Console code pages set to UTF-8');
 
     // Parse command line - returns debug flag
-    var DebugModeFlag := ParseCommandLine;
+    DebugModeFlag := ParseCommandLine;
     if not DebugModeFlag then
-      if not DebugModeFlag then
-        Exit;
+      Exit;
 
     // Configure logging
     ConfigureLogging;
 
-    // Log bitness information early
+	// Log bitness information early
     Logger.Info('Process bitness: %s-bit', [IfThen(Is64BitProcess, '64', '32')]);
 
     // Set up console signal handlers
-    SetupConsoleHandlers;
+	SetupConsoleHandlers;
     Logger.Debug('Console handlers configured');
 
     // Set FPC environment variables for pasls (with bitness awareness)
@@ -908,14 +962,13 @@ begin
       WriteLn(ErrOutput, '');
       WriteLn(ErrOutput, 'Press ENTER to exit...');
       ExitCode := 1;
-	  Exit;
+      Exit;
     end;
 
     // Verify LSP file is executable (just log size, ignore attributes)
     Logger.Debug('LSP file size: %d bytes', [TFile.GetSize(LSPPath)]);
 
     // Check if LSP bitness matches process bitness (warning only)
-    // This is a heuristic check - not 100% reliable but helpful
     var LspIs64Bit := False;
     try
       var LspStream := TFileStream.Create(LSPPath, fmOpenRead);
@@ -925,7 +978,7 @@ begin
         LspStream.Read(PeOffset, SizeOf(PeOffset));
         LspStream.Seek(PeOffset + 4, soBeginning);
         var Machine: Word;
-		LspStream.Read(Machine, SizeOf(Machine));
+        LspStream.Read(Machine, SizeOf(Machine));
         LspIs64Bit := (Machine = $8664); // IMAGE_FILE_MACHINE_AMD64
       finally
         LspStream.Free;
@@ -933,7 +986,7 @@ begin
 
       if Is64BitProcess and not LspIs64Bit then
         Logger.Warning('LSP server is 32-bit but process is 64-bit. This may cause issues.')
-      else if not Is64BitProcess and LspIs64Bit then
+	  else if not Is64BitProcess and LspIs64Bit then
         Logger.Warning('LSP server is 64-bit but process is 32-bit. This may cause issues.');
     except
       // Ignore errors in bitness detection
@@ -950,12 +1003,24 @@ begin
       Server.DebugMode := True;
     end;
 
+    // Give the server a moment to fully initialize its internal structures
+    // This helps ensure it's ready to receive messages
+    Sleep(100);
+
+    // Signal that server is ready to receive messages
+    // The test program is waiting for this event
+    SignalServerReady;
+    Logger.Info('Server ready event signaled - test program can now proceed');
+
+    // Small delay to ensure the event signal is processed by the test program
+    Sleep(50);
+
     try
       Logger.Info('Server created, starting main loop...');
       Server.Run;
       Logger.Info('Server main loop exited');
     finally
-      Server.Free;
+	  Server.Free;
       Server := nil;
       Logger.Info('Server instance freed');
     end;
@@ -969,21 +1034,24 @@ begin
       Logger.Error('Exception class: %s', [E.ClassName]);
       WriteLn(ErrOutput, '');
       WriteLn(ErrOutput, '╔══════════════════════════════════════════════════════════════╗');
-	  WriteLn(ErrOutput, '║                      FATAL ERROR                            ║');
+      WriteLn(ErrOutput, '║                      FATAL ERROR                            ║');
       WriteLn(ErrOutput, '╠══════════════════════════════════════════════════════════════╣');
       WriteLn(ErrOutput, Format('║ %-60s ║', [Copy(E.ClassName, 1, 60)]));
       WriteLn(ErrOutput, Format('║ %-60s ║', [Copy(E.Message, 1, 60)]));
       WriteLn(ErrOutput, '╚══════════════════════════════════════════════════════════════╝');
       WriteLn(ErrOutput, '');
       ExitCode := 1;
-    end;
+	end;
   end;
 
   CleanupConsoleHandlers;
+  CleanupEvents;
   LogContext.Exit('Main');
 
   WriteLn(ErrOutput, 'Server shutdown complete. Press ENTER to exit...');
   ReadLn;
+end;
+
+begin
+  RunServer;
 end.
-
-

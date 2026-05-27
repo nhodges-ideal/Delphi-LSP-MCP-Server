@@ -73,7 +73,7 @@
   │    - Launch DelphiLSPMCPServer.exe with --wait flag                     │
   │    - Display: "Server started successfully! PID: 12345"                 │
   │    - Display debugging instructions                                     │
-  │    - WAIT with: "Press Enter after debugger is attached..."             │
+  │    - WAIT for server's ready event                                      │
   │                                                                         │
   └─────────────────────────────────────────────────────────────────────────┘
 
@@ -92,7 +92,10 @@
   │                                                                         │
   │ 5. Click "Attach"                                                       │
   │                                                                         │
-  │ 6. Press F9 to let the server continue running                          │
+  │ 6. Debugger will break immediately (thread instruction)                 │
+  │    This is NORMAL - process was waiting                                 │
+  │                                                                         │
+  │ 7. Press F9 to let the server continue                                  │
   │                                                                         │
   └─────────────────────────────────────────────────────────────────────────┘
 
@@ -100,9 +103,9 @@
   │ BACK TO IDE 1: TEST PROGRAM                                             │
   ├─────────────────────────────────────────────────────────────────────────┤
   │                                                                         │
-  │ 1. Press Enter in the test console (where it was waiting)               │
+  │ 1. The test program automatically detects server's ready event          │
   │                                                                         │
-  │ 2. The tests will begin to run                                          │
+  │ 2. Tests begin automatically - NO manual Enter press needed!            │
   │                                                                         │
   │ 3. When the test calls the server, breakpoints in IDE 2 will hit!       │
   │                                                                         │
@@ -110,6 +113,21 @@
   │    variables by hovering over them                                      │
   │                                                                         │
   └─────────────────────────────────────────────────────────────────────────┘
+
+
+  SYNCHRONIZATION MECHANISM
+  =========================
+
+  The server uses a named Windows Event for synchronization:
+  - Event Name: 'Global\DelphiLSPMCPServer_Ready'
+  - Server creates event at startup (non-signaled)
+  - Server signals event when fully initialized and ready
+  - Test program waits for this event before sending messages
+
+  This ensures:
+  - No race conditions
+  - No manual console input required
+  - Perfect synchronization between processes
 
 
   WITHOUT --wait (Debug Message Handling Only)
@@ -160,7 +178,7 @@
   5. Breakpoints will hit in test code
 
   LIMITATION: In this method, the server runs freely without a debugger.
-			  You can ONLY debug the test program. The server is NOT under
+              You can ONLY debug the test program. The server is NOT under
               debugger control.
 
   WHAT YOU CANNOT DO WITH SINGLE IDE (Test Only):
@@ -191,16 +209,20 @@
   THE --wait FLAG EXPLAINED
   =========================
 
-  Without --wait: Server starts, initializes, then waits for messages.
+  Without --wait: Server starts, initializes, then signals ready event.
                   You can only debug from Server.Run onward.
                   (Constructor and initialization already executed)
 
   With --wait:    Server displays PID and waits BEFORE any code executes.
-				  You can set breakpoints ANYWHERE including:
+                  You can set breakpoints ANYWHERE including:
                   - The very first line of the program
                   - TMCPServer.Create constructor
                   - InitializeLSP function
                   - Any initialization code
+
+                  After attaching debugger and pressing F9, the server
+                  continues and will signal the ready event when fully
+                  initialized, allowing the test program to proceed.
 
   To use --wait:
     TestAllTools.exe --wait
@@ -216,15 +238,17 @@
   1. Creates pipes for communication
   2. Launches DelphiLSPMCPServer.exe as a separate process
   3. Displays the Server PID
-  4. WAITS for you to attach a debugger
-  5. Only continues when you press Enter
+  4. WAITS for server's ready event (automatic, no user input!)
+  5. Server creates and signals the event when fully initialized
+  6. Test program detects event and starts sending JSON-RPC messages
+  7. No messages are lost, no race conditions
 
   This design gives you unlimited time to:
   - Open the server project in a second IDE
   - Attach to the correct process
   - Set breakpoints
   - Press F9 to continue the server
-  - Then press Enter to start the tests
+  - The test waits automatically - no Enter press needed!
 
 
   TROUBLESHOOTING
@@ -239,13 +263,17 @@
   - Ensure debug info is enabled in server project options
   - Verify you attached to the correct process (check PID)
   - Make sure you pressed F9 after attaching to continue execution
-  - Check that the test console shows "Press Enter after debugger is attached..."
 
   "Breakpoints don't hit in server initialization code"
   - Make sure you added --wait to the test program's command line
   - The server must receive the --wait flag to pause before initialization
   - Without --wait, the server runs through initialization before you can attach
   - Use: TestAllTools.exe --wait
+
+  "Test program hangs waiting for server"
+  - Check that server created the ready event
+  - Look for "Ready event created successfully" in server console
+  - Verify event name matches: Global\DelphiLSPMCPServer_Ready
 
   "Breakpoints don't hit in test program"
   - Are you using Two-IDEs method? Test runs from IDE 1
@@ -298,23 +326,23 @@
   ========
 
   Quick validation (no debugging):
-	TestAllTools.exe
+    TestAllTools.exe
 
   Full debugging with two IDEs (debug server startup):
-	TestAllTools.exe --wait
-	[Then follow the Two-IDEs instructions above]
+    TestAllTools.exe --wait
+    [Then follow the Two-IDEs instructions above]
 
   Full debugging with two IDEs (debug message handling only):
-	TestAllTools.exe
-	[Then follow the Two-IDEs instructions above]
+    TestAllTools.exe
+    [Then follow the Two-IDEs instructions above]
 
   Server-only debugging:
-	TestAllTools.exe
-	[Attach Delphi to the PID shown, but test not debuggable]
+    TestAllTools.exe
+    [Attach Delphi to the PID shown, but test not debuggable]
 
   Test-only debugging:
-	(Open TestAllTools.dpr in Delphi, press F9)
-	[Server not debuggable, only test is under debugger]
+    (Open TestAllTools.dpr in Delphi, press F9)
+    [Server not debuggable, only test is under debugger]
 }
 
 uses
@@ -328,14 +356,17 @@ const
   READ_TIMEOUT_MS       = 15000;
   MAX_MESSAGE_SIZE      = 32 * 1024 * 1024;
   MAX_HEADER_LINE_LENGTH = 8192;
-
   SOURCE_FILE = 'SourceForAnalysis.dpr';
+
+  // Named event for synchronization with server
+  SERVER_READY_EVENT_NAME = 'Global\DelphiLSPMCPServer_Ready';
+  SERVER_READY_TIMEOUT_MS = 60000;  // 60 seconds timeout
 
 type
   TTestResult = record
     Name: string;
     Passed: Boolean;
-	Details: string;
+    Details: string;
     ResponseJson: string;
   end;
 
@@ -347,7 +378,7 @@ var
   SourceUri: string;
   AllResults: TTestResultArray;
   ResultCount: Integer;
-  UseServerWait: Boolean = True;  // New flag for --wait
+  UseServerWait: Boolean = False;  // Default to False now
 
 procedure AddResult(const R: TTestResult);
 begin
@@ -459,7 +490,7 @@ begin
         if ContentLength > 0 then
           Break;
       end
-      else
+	  else
       begin
         LowerLine := LowerCase(string(Line));
         if Pos('content-length:', LowerLine) = 1 then
@@ -529,6 +560,87 @@ begin
   Result := True;
 end;
 
+function WaitForServerReady(APID: DWORD): Boolean;
+var
+  ReadyEvent: THandle;
+  WaitResult: DWORD;
+  StartTime: UInt64;
+  EventCreated: Boolean;
+  HeartbeatTime: UInt64;
+begin
+  Result := False;
+  EventCreated := False;
+  ReadyEvent := 0;
+
+  WriteLn;
+  WriteLn('========================================');
+  WriteLn('WAITING FOR SERVER READY SIGNAL');
+  WriteLn('========================================');
+  WriteLn('Event: ', SERVER_READY_EVENT_NAME);
+  WriteLn('');
+  WriteLn('The server will create this event when it is fully initialized');
+  WriteLn('and ready to receive messages.');
+  WriteLn('');
+  WriteLn('If you are debugging:');
+  WriteLn('  1. Server is currently paused (--wait flag)');
+  WriteLn('  2. Attach debugger in IDE #2');
+  WriteLn('  3. Set breakpoints');
+  WriteLn('  4. Press F9 to continue');
+  WriteLn('  5. Server will initialize and create the event');
+  WriteLn('');
+  WriteLn('Waiting indefinitely for server to create the ready event...');
+  WriteLn('(Press Ctrl+C to abort)');
+  WriteLn('');
+
+  StartTime := GetTickCount64;
+  HeartbeatTime := StartTime;
+
+  // Wait indefinitely for the event to be created
+  while not EventCreated do
+  begin
+    ReadyEvent := OpenEvent(SYNCHRONIZE, False, SERVER_READY_EVENT_NAME);
+    if ReadyEvent <> 0 then
+    begin
+      EventCreated := True;
+      WriteLn(Format('Ready event created after %.1f seconds', [(GetTickCount64 - StartTime) / 1000]));
+    end
+    else
+    begin
+      // Show a heartbeat every 5 seconds to show we're still waiting
+      if (GetTickCount64 - HeartbeatTime) >= 5000 then
+      begin
+        WriteLn(Format('Still waiting for server ready event... (%.1f seconds elapsed)',
+          [(GetTickCount64 - StartTime) / 1000]));
+        HeartbeatTime := GetTickCount64;
+      end;
+      Sleep(500);
+    end;
+  end;
+
+  try
+    WriteLn('');
+    WriteLn('Waiting for server to signal readiness (event to be set)...');
+    WriteLn('(This happens when server completes initialization)');
+    WriteLn('');
+
+    // Wait for the event to be signaled (no timeout - wait forever)
+    WaitResult := WaitForSingleObject(ReadyEvent, INFINITE);
+
+    case WaitResult of
+      WAIT_OBJECT_0:
+        begin
+          WriteLn('Server ready signal received!');
+          Result := True;
+        end;
+      WAIT_FAILED:
+        WriteLn('ERROR: Wait failed with error: ', GetLastError);
+    end;
+  finally
+    if ReadyEvent <> 0 then
+      CloseHandle(ReadyEvent);
+  end;
+end;
+
 function StartServer: Boolean;
 var
   SA: TSecurityAttributes;
@@ -537,8 +649,9 @@ var
   Cmd: string;
   CmdBuf: array[0..2047] of Char;
   StdinRead, StdoutWrite: THandle;
-  StdErr: THandle;
+  StdErrHandle: THandle;
   CreationFlags: DWORD;
+  ServerPID: DWORD;
 begin
   Result := False;
   ProcessHandle := 0;
@@ -563,7 +676,7 @@ begin
     WriteLn('ERROR: CreatePipe stdout failed: ', GetLastError);
     SafeCloseHandle(StdinRead);
     SafeCloseHandle(StdinWrite);
-	Exit(False);
+    Exit(False);
   end;
   SetHandleInformation(StdoutRead, HANDLE_FLAG_INHERIT, 0);
 
@@ -573,10 +686,10 @@ begin
   SI.hStdInput := StdinRead;
   SI.hStdOutput := StdoutWrite;
 
-  StdErr := GetStdHandle(STD_ERROR_HANDLE);
-  if StdErr = INVALID_HANDLE_VALUE then
-    StdErr := 0;
-  SI.hStdError := StdErr;
+  StdErrHandle := GetStdHandle(STD_ERROR_HANDLE);
+  if StdErrHandle = INVALID_HANDLE_VALUE then
+    StdErrHandle := 0;
+  SI.hStdError := StdErrHandle;
 
   // Build command line with or without --wait flag
   if UseServerWait then
@@ -589,8 +702,11 @@ begin
 
   ZeroMemory(@PI, SizeOf(PI));
 
-  // Use CREATE_NO_WINDOW to hide server console (optional, can be removed for debugging)
-  CreationFlags := CREATE_NO_WINDOW;
+  // Show server console when debugging with --wait, hide otherwise
+  if UseServerWait then
+    CreationFlags := 0          // Show console window for debugger attachment
+  else
+    CreationFlags := CREATE_NO_WINDOW;  // Hide in production
 
   if not CreateProcess(nil, CmdBuf, nil, nil, True,
     CreationFlags, nil, nil, SI, PI) then
@@ -607,26 +723,54 @@ begin
   SafeCloseHandle(StdoutWrite);
   SafeCloseHandle(PI.hThread);
   ProcessHandle := PI.hProcess;
+  ServerPID := GetProcessId(ProcessHandle);
 
   WriteLn('Server started successfully!');
-  WriteLn('PID: ', GetProcessId(ProcessHandle));
+  WriteLn('PID: ', ServerPID);
   WriteLn('');
   WriteLn('========================================');
   WriteLn('DEBUGGING INSTRUCTIONS:');
   WriteLn('========================================');
-  WriteLn('1. In Delphi IDE: Run -> Attach to Process');
-  WriteLn('2. Find process with PID: ', GetProcessId(ProcessHandle));
-  WriteLn('3. Click Attach');
-  WriteLn('4. Set breakpoints in server code');
+  WriteLn('');
+  WriteLn('1. Look for the SERVER''S CONSOLE WINDOW (separate window)');
+  WriteLn('2. In Delphi IDE #2: Run -> Attach to Process');
+  WriteLn('3. Find process with PID: ', ServerPID);
+  WriteLn('4. Click Attach');
   if UseServerWait then
-    WriteLn('5. Server is waiting with --wait flag. Press F9 to continue, then Press Enter here')
+  begin
+	WriteLn('5. Debugger will break immediately (server is waiting)');
+	WriteLn('6. Set breakpoints in server code');
+	WriteLn('7. Press F9 to continue');
+	WriteLn('');
+	WriteLn('The server will DETECT debugger attachment automatically');
+	WriteLn('and continue initialization WITHOUT requiring Enter press');
+	WriteLn('');
+	WriteLn('Then it will signal the ready event and tests will begin');
+  end
   else
-    WriteLn('5. Press F9 to continue server');
-  WriteLn('6. Press Enter here to start tests');
+  begin
+	WriteLn('5. Set breakpoints in server code');
+	WriteLn('6. Press F9 to continue');
+	WriteLn('');
+	WriteLn('The server will then:');
+	WriteLn('  - Initialize');
+	WriteLn('  - Create the ready event');
+	WriteLn('  - Tests will begin automatically');
+  end;
   WriteLn('========================================');
   WriteLn('');
-  WriteLn('Press Enter after debugger is attached...');
-  ReadLn;
+
+  // Wait for server to signal it's ready (waits indefinitely)
+  if not WaitForServerReady(ServerPID) then
+  begin
+    WriteLn('ERROR: Server did not signal readiness');
+    Result := False;
+    Exit;
+  end;
+
+  WriteLn('');
+  WriteLn('Server is ready, starting tests...');
+  WriteLn('');
 
   Result := True;
 end;
@@ -634,6 +778,14 @@ end;
 procedure Cleanup;
 begin
   WriteLn('Cleaning up...');
+
+  // Clean up the event if it still exists
+  var EventHandle := OpenEvent(EVENT_ALL_ACCESS, False, SERVER_READY_EVENT_NAME);
+  if EventHandle <> 0 then
+  begin
+	CloseHandle(EventHandle);
+  end;
+
   if ProcessHandle <> 0 then
   begin
     WriteLn('Terminating server process (PID: ', GetProcessId(ProcessHandle), ')');
@@ -695,7 +847,7 @@ begin
       Json.Free;
     end;
   except
-	on E: Exception do
+    on E: Exception do
       Result.Details := 'Exception: ' + E.Message;
   end;
 end;
@@ -758,13 +910,16 @@ var
   I: Integer;
   Param: string;
 begin
+  UseServerWait := False;  // Default to not waiting
+
   for I := 1 to ParamCount do
   begin
     Param := ParamStr(I);
-	if (Param = '--wait') then
+    if (Param = '--wait') then
     begin
       UseServerWait := True;
-      WriteLn('Mode: Server will start with --wait flag (for debugging startup)');
+      WriteLn('Mode: Server will start with --wait flag (for debugging server startup)');
+      WriteLn('      This allows you to debug from the very first line of server code');
     end
     else if (Param = '--help') or (Param = '-h') then
     begin
@@ -772,19 +927,24 @@ begin
       WriteLn('');
       WriteLn('Usage:');
       WriteLn('  TestAllTools.exe              - Launch new server and run tests (default)');
-      WriteLn('  TestAllTools.exe --wait       - Launch server with --wait flag (debug server startup)');
+	  WriteLn('  TestAllTools.exe --wait       - Launch server with --wait flag (debug server startup)');
       WriteLn('  TestAllTools.exe --help       - Show this help');
       WriteLn('');
-      WriteLn('For debugging:');
+      WriteLn('For debugging with event synchronization:');
       WriteLn('  1. Run TestAllTools.exe --wait');
-      WriteLn('  2. In Delphi: Run -> Attach to Process -> Select the server PID');
-      WriteLn('  3. Set breakpoints in server code (including initialization)');
-      WriteLn('  4. Press F9 to continue');
-      WriteLn('  5. Press Enter in test console to start tests');
-      WriteLn('  6. Breakpoints will hit');
+      WriteLn('  2. In Delphi IDE #2: Run -> Attach to Process -> Select the server PID');
+      WriteLn('  3. Debugger will break immediately (server paused at program entry)');
+      WriteLn('  4. Set breakpoints ANYWHERE (including constructor, initialization)');
+      WriteLn('  5. Press F9 to continue');
+      WriteLn('  6. Server initializes and signals ready event');
+      WriteLn('  7. Tests start automatically - NO manual Enter press needed!');
+      WriteLn('  8. Breakpoints will hit when tests call server');
       Halt(0);
     end;
   end;
+
+  if not UseServerWait then
+    WriteLn('Mode: Normal execution (no --wait, server starts normally)');
 end;
 
 procedure RunAllTests;
@@ -848,7 +1008,7 @@ begin
 
     if Pos('"delphi_completion"', R.ResponseJson) > 0 then
       WriteLn('  OK: delphi_completion found')
-    else
+	else
       WriteLn('  WARNING: delphi_completion NOT found');
 
     if Pos('"delphi_workspace_symbols"', R.ResponseJson) > 0 then
@@ -1010,7 +1170,7 @@ begin
     if AllResults[I].Passed then
       Inc(Passed)
     else
-      Inc(Failed);
+	  Inc(Failed);
   end;
 
   WriteLn;
@@ -1025,7 +1185,7 @@ begin
   begin
     WriteLn;
     WriteLn('--- FAILURE DETAILS ---');
-	for I := 0 to ResultCount - 1 do
+    for I := 0 to ResultCount - 1 do
     begin
       if not AllResults[I].Passed then
       begin
@@ -1067,7 +1227,7 @@ begin
     Exit;
   end;
 
-  // Start the MCP server (this will show PID and wait for debugger)
+  // Start the MCP server (this will show PID and wait for ready event)
   WriteLn('Starting MCP server...');
   if not StartServer then
   begin
