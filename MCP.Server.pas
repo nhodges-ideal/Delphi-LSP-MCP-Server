@@ -728,23 +728,27 @@ begin
       try
         ResultObj.AddPair('tools', ToolsArray);
         SendResponse(ARequest.Id, ResultObj);
-      finally
-        ResultObj.Free;
+	  finally
+		ResultObj.Free;  // This will also free ToolsArray
       end;
-    finally
-      for I := 0 to High(Tools) do
-        Tools[I].Free;
-      ToolsArray.Free;
-    end;
+	finally
+      // Fixed:
+	  // Don't free ToolsArray here - it's already freed by ResultObj
+{
+	  for I := 0 to High(Tools) do
+		Tools[I].Free;
+	  ToolsArray.Free;
+}
+	end;
   except
-    on E: Exception do
-    begin
-      Inc(FTotalErrors);
-      FLastErrorTime := Now;
-      Logger.Error('Tools list error: %s', [E.Message]);
-      LogDebug('Exception in HandleToolsList: %s - %s', [E.ClassName, E.Message]);
-      SendError(ARequest.Id, TJsonRpcErrorCode.InternalError, E.Message);
-    end;
+	on E: Exception do
+	begin
+	  Inc(FTotalErrors);
+	  FLastErrorTime := Now;
+	  Logger.Error('Tools list error: %s', [E.Message]);
+	  LogDebug('Exception in HandleToolsList: %s - %s', [E.ClassName, E.Message]);
+	  SendError(ARequest.Id, TJsonRpcErrorCode.InternalError, E.Message);
+	end;
   end;
 
   FLogContext.Exit('HandleToolsList');
